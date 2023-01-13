@@ -8,6 +8,7 @@ import math
 import subprocess
 import re
 from LPWriter import LPWriter
+from GurobiLPWriter import GurobiLPWriter
 
 #Webserver to handle requests from LetSyncrhonise
 class server(BaseHTTPRequestHandler):
@@ -116,10 +117,11 @@ def lpScheduler(system):
             timesRan = timesRan + 1
 
             #open to write new LP file
+            #lp = GurobiLPWriter("system.lp", veryLargeNumber)
             lp = LPWriter("system.lp", veryLargeNumber)
 
             #objective to min End-To-End time
-            lp.write("min: endToEndTime;\n")
+            lp.writeObjective("endToEndTime")
 
 
 
@@ -212,7 +214,7 @@ def lpScheduler(system):
                 lp.writeTaskDependencyContraint(srcTask, destTask, destTaskInstances, srcTaskInstances)
 
             lp.write(lp.endToEndConstraints)
-            lp.write("endToEndTime = "+lp.endToEndTimeSummation+";\n")
+            lp.writeObjectiveEquation()
 
             for key in limitEndtoEndConstraint:
                 #The constraintReductionList contains dependency instance pairs of the currently processing dependency
