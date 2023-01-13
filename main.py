@@ -105,14 +105,14 @@ def lpScheduler(system):
     timesRan = 0
     print("Initial Run ...")
     #go through each dependency and try to tighten the worst case end-to-end time
-    for dependencyReduction in taskDependenciesList:
+    for currentProcessingDependency in taskDependenciesList:
 
         #keep iterating ILP solver until no further optimisations can be found
         lookingForOptimalSolution = True
         #list of ILP constraint used to tighten the current dependency
         constraintReductionList = []
         while(lookingForOptimalSolution):
-            print("Run ... "+dependencyReduction)
+            print("Run ... "+currentProcessingDependency)
             timesRan = timesRan + 1
 
             #open to write new LP file
@@ -215,6 +215,7 @@ def lpScheduler(system):
             lp.write("endToEndTime = "+lp.endToEndTimeSummation+";\n")
 
             for key in limitEndtoEndConstraint:
+                #The constraintReductionList contains dependency instance pairs of the currently processing dependency
                 if (key in constraintReductionList):
                     lp.write(key + "<=" + str(limitEndtoEndConstraint[key]-1) + ";\n")
                 else:
@@ -239,45 +240,8 @@ def lpScheduler(system):
                 limitEndtoEndConstraint = {}
             else:
                 print("Problem feasible.")
-                for tasks in allTaskInstances.keys():
-                    instances = allTaskInstances[tasks]
-                    for inst in instances:
-                        startTimeKey = lp.taskInstStartTime(inst)
-                        endTimeKey = lp.taskInstEndTime(inst)
-                #for key in results.keys():
-                #    if ("DEP" in key):
-                #        destTaskInst = key[(key.find("_dest_")+len("_dest_")):key.find("_src_")]
-                #        srcTaskInst = key[key.find("_src_")+len("_src_"):len(key)]
-                #        print(srcTaskInst+"->"+destTaskInst + " : "+results[key])
-
-                currentWorstChainTimes = {}
-                for chain in lp.endToEndTaskTable.keys():
-                    constraints = lp.endToEndTaskTable[chain]
-                    for key in results.keys():
-                        if ("EtoE" in key):
-                            if key in constraints:
-                                if ((chain in currentWorstChainTimes.keys()) == True):
-                                    if(currentWorstChainTimes[chain] <  float(results[key])):
-                                        currentWorstChainTimes[chain] = float(results[key])
-                                else:
-                                    currentWorstChainTimes[chain] =  float(results[key])
-                                    
-                #print("Worst Case Chain Times:")
-                #print(lp.endToEndTaskTable)
-                #print(currentWorstChainTimes)
-
-                #for key in results.keys():
-                #    if ("EtoE" in key):
-                #        print(key + " : "+results[key])
-
-                constraintReductionList = []
-                for chain in lp.endToEndTaskTable.keys():  
-                    constraints = lp.endToEndTaskTable[chain]
-                    for c in constraints:
-                        limitEndtoEndConstraint[c] = round(currentWorstChainTimes[chain])
-                        if (chain == dependencyReduction):
-                            constraintReductionList.append(c)
-
+                limitEndtoEndConstraint, constraintReductionList = parseLPSolveResults(limitEndtoEndConstraint, currentProcessingDependency, lp, results)
+                
                         
                 #Export Schedule
                 schedule = exportSchedule(system, schedule, lp, allTaskInstances, results)
@@ -285,6 +249,31 @@ def lpScheduler(system):
                 print("---\n")
     print("Ran "+str(timesRan) + " times")
     return lastFeasibleSchedule
+
+def parseLPSolveResults(limitEndtoEndConstraint, currentProcessingDependency, lp, results):
+    currentWorstChainTimes = {}
+
+    #get current worst case end to end times for each task pair dependency
+    for chain in lp.endToEndTaskTable.keys():
+        constraints = lp.endToEndTaskTable[chain]
+        for key in results.keys():
+            if ("EtoE" in key):
+                if key in constraints:
+                    if ((chain in currentWorstChainTimes.keys()) == True):
+                        if(currentWorstChainTimes[chain] <  float(results[key])):
+                            currentWorstChainTimes[chain] = float(results[key])
+                    else:
+                        currentWorstChainTimes[chain] =  float(results[key])
+                                
+
+    constraintReductionList = []
+    for chain in lp.endToEndTaskTable.keys():  
+        constraints = lp.endToEndTaskTable[chain]
+        for c in constraints:
+            limitEndtoEndConstraint[c] = round(currentWorstChainTimes[chain])
+            if (chain == currentProcessingDependency):
+                constraintReductionList.append(c)
+    return limitEndtoEndConstraint, constraintReductionList
 
 def exportSchedule(system, schedule, lp, allTaskInstances, results):
     for t in system['TaskStore']:
