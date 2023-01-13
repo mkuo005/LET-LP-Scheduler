@@ -222,8 +222,7 @@ def lpScheduler(system):
                     lp.write(key + "<=" + str(limitEndtoEndConstraint[key]) + ";\n")
 
             #lp.write(sumOfEndTimeString + " = "+ str(commutativeEndtime) +";\n")
-            for b in lp.booleanVariables:
-                lp.write("bin "+ b + ";\n")
+            lp.writeBooleanConstraints()
 
             #ILP problem becomes very hard if large integer is used.
             #for i in intVaraibles:

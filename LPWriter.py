@@ -83,6 +83,9 @@ class LPWriter:
             #There can only be one source
             self.file.write(srcInstString+" = 1;\n")
 
+    def writeBooleanConstraints(self):
+        for b in self.booleanVariables:
+            self.file.write("bin "+ b + ";\n")
         
 
     def close(self):
