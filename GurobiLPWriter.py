@@ -78,8 +78,8 @@ class GurobiLPWriter:
 
                 self.endToEndConstraints += "EtoE_"+ endToEndConstraintID + " >= 0\n"
                 X = self.taskInstEndTime(destInst) + " - " + self.taskInstStartTime(srcInst)
-                self.endToEndConstraints += X +" - "+str(self.veryLargeNumber)+" + "+str(self.veryLargeNumber)+" " +instanceConnectionControl + " - " + "EtoE_"+ endToEndConstraintID + " <= 0"  +"\n"
-                self.endToEndConstraints += X +" + "+str(self.veryLargeNumber)+" - "+str(self.veryLargeNumber)+" " +instanceConnectionControl + " - " + "EtoE_"+ endToEndConstraintID + " >= 0"  +"\n"
+                self.endToEndConstraints += X +" + "+str(self.veryLargeNumber)+" " +instanceConnectionControl + " - " + "EtoE_"+ endToEndConstraintID + " <= " + str(self.veryLargeNumber)  +"\n"
+                self.endToEndConstraints += X +" - "+str(self.veryLargeNumber)+" " +instanceConnectionControl + " - " + "EtoE_"+ endToEndConstraintID + " >= " +" -"+str(self.veryLargeNumber) +"\n"
                                 
                 #a simple sum of the difference will be optimising the average - need to think...
                 self.endToEndTimeSummation += "EtoE_"+ endToEndConstraintID

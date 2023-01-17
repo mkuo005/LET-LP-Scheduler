@@ -9,7 +9,7 @@ import subprocess
 import re
 from LPWriter import LPWriter
 from GurobiLPWriter import GurobiLPWriter
-
+gurobi = True
 #Webserver to handle requests from LetSyncrhonise
 class server(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
@@ -117,8 +117,10 @@ def lpScheduler(system):
             timesRan = timesRan + 1
 
             #open to write new LP file
-            #lp = GurobiLPWriter("system.lp", veryLargeNumber)
-            lp = LPWriter("system.lp", veryLargeNumber)
+            if gurobi: 
+                lp = GurobiLPWriter("system.lp", veryLargeNumber)
+            else:
+                lp = LPWriter("system.lp", veryLargeNumber)
 
             #objective to min End-To-End time
             lp.writeObjective("endToEndTime")
@@ -218,10 +220,16 @@ def lpScheduler(system):
 
             for key in limitEndtoEndConstraint:
                 #The constraintReductionList contains dependency instance pairs of the currently processing dependency
-                if (key in constraintReductionList):
-                    lp.write(key + "<=" + str(limitEndtoEndConstraint[key]-1) + ";\n")
+                if gurobi:
+                    if (key in constraintReductionList):
+                        lp.write(key + " <= " + str(limitEndtoEndConstraint[key]-1) + "\n")
+                    else:
+                        lp.write(key + " <= " + str(limitEndtoEndConstraint[key]) + "\n")
                 else:
-                    lp.write(key + "<=" + str(limitEndtoEndConstraint[key]) + ";\n")
+                    if (key in constraintReductionList):
+                        lp.write(key + " <= " + str(limitEndtoEndConstraint[key]-1) + ";\n")
+                    else:
+                        lp.write(key + " <= " + str(limitEndtoEndConstraint[key]) + ";\n")
 
             #lp.write(sumOfEndTimeString + " = "+ str(commutativeEndtime) +";\n")
             lp.writeBooleanConstraints()
@@ -232,18 +240,22 @@ def lpScheduler(system):
 
 
             lp.close()
-            results, lines = CallLPSolve()
+
+            if gurobi:
+                results, lines = CallGurobi()
+                #print(results)
+            else:
+                results, lines = CallLPSolve()
             print("Results:\n---")
             
-            if ("This problem is infeasible" in lines[0]):
+            if len(results) == 0 :
                 print("Problem not feasible.")
                 lookingForOptimalSolution = False
                 limitEndtoEndConstraint = {}
             else:
                 print("Problem feasible.")
-                limitEndtoEndConstraint, constraintReductionList = parseLPSolveResults(limitEndtoEndConstraint, currentProcessingDependency, lp, results)
-                
-                        
+                print("Current best end-to-end total: "+ str(results["endToEndTime"]))
+                limitEndtoEndConstraint, constraintReductionList = parseLPSolveResults(limitEndtoEndConstraint, currentProcessingDependency, lp, results)       
                 #Export Schedule
                 schedule = exportSchedule(system, schedule, lp, allTaskInstances, results)
                 lastFeasibleSchedule = schedule.copy()
@@ -310,12 +322,31 @@ def exportSchedule(system, schedule, lp, allTaskInstances, results):
         schedule["TaskInstancesStore"].append(taskInstancesJson)
     return schedule
 
+def CallGurobi():
+    results = {}
+    with subprocess.Popen(["gurobi_cl",'ResultFile=gurobiresult.sol','system.lp'], stdout=subprocess.PIPE) as proc:
+        output = proc.stdout.read().decode("utf-8") 
+        if "Model is infeasible" in output:
+            return {}, {}
+        f = open("gurobiresult.sol", "r")
+        data = f.read()
+        lines = data.split("\n")
+
+        for l in lines:
+            if (len(l) == 0):
+                continue
+            fragment = re.split('\s+', l)
+            results[fragment[0]] = fragment[1]
+    return results,lines
 
 def CallLPSolve():
     results = {}
 
     with subprocess.Popen(["lp_solve_5.5.2.11_exe_win64\lp_solve.exe",'system.lp','-ip'], stdout=subprocess.PIPE) as proc:
         output = proc.stdout.read().decode("utf-8") 
+        #print(output)
+        if "This problem is infeasible" in output:
+            return {}, {}
         lines = output.split("\r\n")
         for l in lines:
             if (len(l) == 0):
@@ -331,7 +362,15 @@ if __name__ == '__main__':
     print("Start LP Scheduler")
     parser = argparse.ArgumentParser()
     parser.add_argument("-f", type=str, default="")
+    parser.add_argument('-lpsolve', action='store_true')
     args = parser.parse_args()
+    
+    if args.lpsolve:
+        gurobi = False
+        print("Solver LPsolve")
+    else:
+        print("Solver Gruobi")
+
     if len(args.f) > 0:
         f = open(args.f)
         system = json.load(f)
