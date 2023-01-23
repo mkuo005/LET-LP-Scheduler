@@ -157,8 +157,8 @@ def lpScheduler(system):
                     instanceDeadline = instanceStartTime + period
 
                     #set up execution bounds constraint
-                    lp.writeTaskInstanceExecutionBounds(inst, instanceStartTime, instanceDeadline, taskWCET[taskName])
-                    
+                    lp.writeTaskInstanceExecutionBounds(str(taskName), inst, instanceStartTime, instanceDeadline, taskWCET[taskName])
+
                     lp.intVaraibles.append("U"+inst + "_end_time")
                     lp.intVaraibles.append("U"+inst + "_start_time")
                     i = i + 1
