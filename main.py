@@ -10,6 +10,7 @@ import re
 from LPWriter import LPWriter
 from GurobiLPWriter import GurobiLPWriter
 gurobi = True
+sameLETForAllInstances = True
 #Webserver to handle requests from LetSyncrhonise
 class server(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
@@ -157,7 +158,7 @@ def lpScheduler(system):
                     instanceDeadline = instanceStartTime + period
 
                     #set up execution bounds constraint
-                    lp.writeTaskInstanceExecutionBounds(str(taskName), inst, instanceStartTime, instanceDeadline, taskWCET[taskName])
+                    lp.writeTaskInstanceExecutionBounds(str(taskName), inst, instanceStartTime, instanceDeadline, taskWCET[taskName], sameLETForAllInstances)
 
                     lp.intVaraibles.append("U"+inst + "_end_time")
                     lp.intVaraibles.append("U"+inst + "_start_time")
@@ -260,6 +261,11 @@ def lpScheduler(system):
                 schedule = exportSchedule(system, schedule, lp, allTaskInstances, results)
                 lastFeasibleSchedule = schedule.copy()
                 print("---\n")
+        #if all instances have the same offset there is no point to iterate for a solution as all solutions are the same        
+            if (sameLETForAllInstances) :
+                lookingForOptimalSolution = False
+        if (sameLETForAllInstances) :
+            break
     print("Ran "+str(timesRan) + " times")
     return lastFeasibleSchedule
 

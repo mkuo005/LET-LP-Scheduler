@@ -29,7 +29,7 @@ class LPWriter:
     def taskInstEndTime(self, taskInstance):
         return "U"+taskInstance + "_end_time"
 
-    def writeTaskInstanceExecutionBounds(self, taskName, taskInstance, instanceStartTime, instanceDeadline, wcet):
+    def writeTaskInstanceExecutionBounds(self, taskName, taskInstance, instanceStartTime, instanceDeadline, wcet, sameLETForAllInstances):
         #task have to start after the period
         self.file.write(self.taskInstStartTime(taskInstance) + " >= "+ str(instanceStartTime) + ";\n")
         #task have to end before the period
@@ -39,9 +39,10 @@ class LPWriter:
         #Instance end time minus start time must be larger than wcet
         self.file.write(self.taskInstEndTime(taskInstance) + " - "+ self.taskInstStartTime(taskInstance) + " >= " + str(wcet) + ";\n")
 
-        #Make sure all LET instances start and end at the same time
-        self.file.write(self.taskInstStartTime(taskName) + " = "+ self.taskInstStartTime(taskInstance) + " - " + str(instanceStartTime) + ";\n")
-        self.file.write(self.taskInstEndTime(taskName) + " = "+ self.taskInstEndTime(taskInstance) + " - " + str(instanceStartTime) + ";\n")
+        if (sameLETForAllInstances):
+            #Make sure all LET instances start and end at the same time
+            self.file.write(self.taskInstStartTime(taskName) + " = "+ self.taskInstStartTime(taskInstance) + " - " + str(instanceStartTime) + ";\n")
+            self.file.write(self.taskInstEndTime(taskName) + " = "+ self.taskInstEndTime(taskInstance) + " - " + str(instanceStartTime) + ";\n")
 
     def writeTaskOverlapContraint(self, currentTaskInst, otherTaskInst):
         controlVariable = "control"+currentTaskInst+"_"+otherTaskInst
