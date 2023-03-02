@@ -1,5 +1,5 @@
 # LET-LP-Scheduler
-Logical Execution Time Linear Programming Scheduler is an external plugin for the [LetSynchronise](https://github.com/eyip002/LetSynchronise) framework that computes an optimal schedule for overall system end-to-end response times.  
+Logical Execution Time Linear Programming Scheduler is an [external plugin](https://github.com/eyip002/LetSynchronise/blob/master/sources/plugins/ls.plugin.goal.ilp.js) for the [LetSynchronise](https://github.com/eyip002/LetSynchronise) framework that computes an optimal schedule for overall system end-to-end response times.  
 
 ## Dependencies
 * Python 3
