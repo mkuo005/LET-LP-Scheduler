@@ -9,7 +9,7 @@ Logical Execution Time Linear Programming Scheduler is an external plugin for th
 
 ## Usage
 * Step 0 - Make sure python3 and Gurobi or LPSolve is in the system PATH variable
-* Step 1 - Make sure LetSyncrhonise framework is running on a browser
+* Step 1 - Make sure LetSynchronise framework is running on a browser
 * Step 2 (Gurobi) - `python3 main.py` 
   * Step 2a (LpSolve) - `python3 main.py -lpsolve` 
 * Step 3 - In the Analyse tab of LetSynchronise framework choose Scheduler `No Scheduling (Identity)` and Goal `ILP-based Schedule Optimizer`
