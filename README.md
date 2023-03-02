@@ -18,3 +18,6 @@ Logical Execution Time Linear Programming Scheduler is an external plugin for th
 
 ### Ports 
 The LET-LP-Scheduler communicates with LetSynchronise using localhost on port 8181. The ports can be changed, however, the same change will need to be reflect on the plugin in LetSynchronise.
+
+### Server requests
+The LET-LP-Scheduler uses post requests to service a scheduling request. The body of the post request is in the LetSynchronise JSON format ([examples](https://github.com/eyip002/LetSynchronise/tree/master/examples)) with the addition of the `"makespan" : int` at the top level.
