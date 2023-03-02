@@ -7,7 +7,7 @@ Logical Execution Time Linear Programming Scheduler is an external plugin for th
 * Linear Programming Solver ([Gurobi](https://www.gurobi.com/) or [LPSolve](https://lpsolve.sourceforge.net/5.5/))
 
 
-##Usage
+## Usage
 * Step 0 - Make sure python3 and Gurobi or LPSolve is in the system PATH variable
 * Step 1 - Make sure LetSyncrhonise framework is running on a browser
 * Step 2 (Gurobi) - `python3 main.py` 
