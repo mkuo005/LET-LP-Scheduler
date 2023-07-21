@@ -82,7 +82,7 @@ def lpScheduler(system):
     print("System hyperperiod: " + str(hyperperiod))
 
     #The number of hyperperiod used for scheduler is to exceed the makespan
-    factor = system['makespan'] / hyperperiod
+    factor = system['PluginParameters']['Makespan'] / hyperperiod
     factor = math.ceil(factor)
     hyperperiod = factor * hyperperiod 
     print("Problem scaled hyperperiod: " + str(hyperperiod))
