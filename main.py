@@ -1,20 +1,38 @@
-#Webserver API
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer # python3
+"""
+This projects converts LetSyncrhonise tasks into linear programming constraints to find an optiminal schedule
+"""
+
+
+# Import web server libraries
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import socketserver 
+
+# Import the required libraries
 import time
 import argparse
 import json
 import math
 import subprocess
 import re
+
+# Import LPSolve constraint generator
 from LPWriter import LPWriter
+
+# Import Gurobi constraint generator
 from GurobiLPWriter import GurobiLPWriter
+
+# Tool configurations
+
+# Use Gurobi styled LP constraints
 gurobi = True
+
+# Restrict that all instances of a task have the same LET parameters
 sameLETForAllInstances = True
-#Webserver to handle requests from LetSyncrhonise
+
+# Webserver to handle requests from LetSyncrhonise LP plugin
 class server(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
-        #Allow cross origin requests
+        #Allow cross origin headers
         self.send_response(200, "ok")
         self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS, POST')
         self.send_header("Access-Control-Allow-Headers", "X-Requested-With")
@@ -22,33 +40,31 @@ class server(BaseHTTPRequestHandler):
         self.end_headers()
         
     def end_headers (self):
+        #Allow cross origin headers
         self.send_header('Access-Control-Allow-Origin', '*')
         BaseHTTPRequestHandler.end_headers(self)
         
     def _set_headers(self):
         self.send_response(200)
-        #self.send_header('Content-type', 'text/html')
         self.send_header('Content-Type', 'application/json')
         self.end_headers()
+        
     def _set_error_headers(self):
-        self.send_response(501)
+        self.send_response(501, "Scheduler does not support posted LET system")
         self.send_header('Content-type', 'text/html')
-
         self.end_headers()
+        
     def do_GET(self):
         self._set_headers()
         self.wfile.write("received get request")
         
     def do_POST(self):
         '''Reads post request body'''
-        #self._set_headers()
         content_len = int(self.headers.get('content-length'))
         post_body = self.rfile.read(content_len)
-        #print(post_body)
         system = json.loads(post_body.decode("utf-8"))
         schedule = lpScheduler(system)
         if (schedule == None):
-            #self.send_response(501, "Scheduler does not support LET parameters")
             self._set_error_headers()
         else:
             self._set_headers()
@@ -59,120 +75,121 @@ class server(BaseHTTPRequestHandler):
 
 
 
-#LP Scheduler
+# LP Scheduler
 def lpScheduler(system):
     
-    #Current Schedule
+    # Initial empty schedule
     schedule = {
         "DependencyInstancesStore" : [], 
         "EventChainInstanceStore" : [],
         "TaskInstancesStore" : []
         }
 
-    #Store latest fesible schedule
+    # Store latest fesible schedule
     lastFeasibleSchedule = schedule.copy()
 
-    #Constraints to improve end-to-end reaction time by limiting the value found 
+    # Constraints to improve end-to-end reaction time by limiting the value found 
     limitEndtoEndConstraint = {}
 
-    #Determine the hyperperiod of tasks
+    # Determine the hyperperiod of tasks
     hyperperiod = 1
     for t in system['TaskStore']:
         hyperperiod = math.lcm(hyperperiod, t['period'])
     print("System hyperperiod: " + str(hyperperiod))
 
-    #The number of hyperperiod used for scheduler is to exceed the makespan
+    # The number of hyperperiod used for scheduler is to exceed the makespan as event chains can span across mutiple hyperperiods
     factor = system['PluginParameters']['Makespan'] / hyperperiod
     factor = math.ceil(factor)
     hyperperiod = factor * hyperperiod 
-    print("Problem scaled hyperperiod: " + str(hyperperiod))
+    print("Hyperperiod scaled by makespan: " + str(hyperperiod))
     
-    #very large number is the hyperperiod
+    # Very large number is the scaled hyperperiod as task parameters cannot exceed the scaled hyperperiod
     veryLargeNumber = hyperperiod
 
 
-    #get a list of all task dependencies that does not include the environment
+    # Get a list of all task dependencies that does not include the environment '__system'
     taskDependenciesList = []
-    for dep in system['DependencyStore']:
-        dependencyName = dep['name']
-        srcTask = dep['source']['task']
-        destTask = dep['destination']['task']
+    for dependency in system['DependencyStore']:
+        name = dependency['name']
+        srcTask = dependency['source']['task']
+        destTask = dependency['destination']['task']
         if (srcTask == '__system' or destTask == '__system'):
             continue
         taskDependencyPair = srcTask+"_"+destTask
         taskDependenciesList.append(taskDependencyPair)
 
 
-    #variable to track number of iterations to find solution    
+    # Variable to track number of iterations to find solution    
     timesRan = 0
     print("Initial Run ...")
-    #go through each dependency and try to tighten the worst case end-to-end time
+
+    # Illiterate through each dependency and try to tighten the worst case end-to-end time
     for currentProcessingDependency in taskDependenciesList:
 
-        #keep iterating ILP solver until no further optimisations can be found
+        # Keep iterating ILP solver until no further optimisations can be found
         lookingForOptimalSolution = True
-        #list of ILP constraint used to tighten the current dependency
+        # List of ILP constraint used to tighten the current dependency
         constraintReductionList = []
         while(lookingForOptimalSolution):
             print("Run ... "+currentProcessingDependency)
             timesRan = timesRan + 1
 
-            #open to write new LP file
+            # Create LP writer for the selected solver
             if gurobi: 
                 lp = GurobiLPWriter("system.lp", veryLargeNumber)
             else:
                 lp = LPWriter("system.lp", veryLargeNumber)
 
-            #objective to min End-To-End time
+            # Create the objective to minimize End-To-End time
             lp.writeObjective("endToEndTime")
 
-
-
-            #all task instances within the hyperperiod
+            # All task instances within the hyperperiod
             allTaskInstances = {}
             taskWCET = {}
             taskPeriod = {}
 
-            #go over each task and create contraints for each task instance
+            # Encode the task parameters in to LP contraints
+            # Go over each task and create contraints for each task instance
             for t in system['TaskStore']:
                 lp.writeComment("task properties")
                 
-                #get current task properties
+                # Get current task properties
                 taskName = t['name']
                 wcet = t['wcet']
                 period = t['period']
 
-                #store task properties in list
+                # Store task properties in list
                 taskWCET[taskName] = wcet
                 taskPeriod[taskName] = period
                 
-                #for each instrance of the task within the hyperperiod
+                # For each instrance of the task within the hyperperiod
                 instances = []
                 i = 0
                 for instanceStartTime in range(0, hyperperiod, period):
-                    #task instance with integer identification
+                    # Task instances will be named by incrementing an integer index
                     inst = taskName + "_" + str(i)
                     instances.append(inst)
 
-                    #instance properties
+                    # Computer task instance properties
+                    # Computer the task instance deadline
                     instanceDeadline = instanceStartTime + period
-
-                    #set up execution bounds constraint
+                    # Encode the execution bounds of the task instance in LP constraints
                     lp.writeTaskInstanceExecutionBounds(str(taskName), inst, instanceStartTime, instanceDeadline, taskWCET[taskName], sameLETForAllInstances)
 
+                    # The append list of unknown integer variables with the instance start and end times
                     lp.intVaraibles.append("U"+inst + "_end_time")
                     lp.intVaraibles.append("U"+inst + "_start_time")
                     i = i + 1
                 
-                #maintain a list of instances assoicated to a task
+                # Maintain a list of instances assoicated to a task
                 allTaskInstances[taskName] = instances
             
-            #print("Task Instances: " + str(allTaskInstances))
+            # create a copy of all task instances for manipulation
             copyAllTaskInstances = allTaskInstances.copy()
 
             lp.writeComment("Make sure tasks do not overlap in execution")
 
-            #Go over each task and make sure the task instances do not overlap in execution (single core)
+            # Go over each task and make sure the task instances do not overlap in execution (single core)
             for t in system['TaskStore']:
                 wcet = t['wcet']
                 #get all instances of that task
@@ -189,38 +206,38 @@ def lpScheduler(system):
             lp.endToEndConstraints = ""
             lp.endToEndTaskTable = {}
 
-            #Iterate over each dependency
-            for dep in system['DependencyStore']:
+            # Iterate over each dependency
+            for dependency in system['DependencyStore']:
 
-                #dependency parameters
-                dependencyName = dep['name']
-                srcTask = dep['source']['task']
-                destTask = dep['destination']['task']
+                # Dependency parameters
+                name = dependency['name']
+                srcTask = dependency['source']['task']
+                destTask = dependency['destination']['task']
 
-                #if the dependency is to the environment then ignore as there the environment can be sampled/emitted to anytime
+                # If the dependency is to the environment then ignore as there the environment can be sampled/emitted to anytime
                 if (srcTask == '__system' or destTask == '__system'):
                     continue
 
-                #get the instances of all source and destination tasks
+                # Get the instances of all source and destination tasks
                 srcTaskInstances = allTaskInstances[srcTask]
                 destTaskInstances = allTaskInstances[destTask]
 
 
-                lp.writeComment(dependencyName)
+                lp.writeComment(name)
                 taskDependencyPair = srcTask+"_"+destTask
 
                 lp.endToEndTaskTable[taskDependencyPair] = []
 
-                #Create constraint that each event dependency task instance can only have 1 source task instance
-                #Iterate over destination task instances
-                
+                # Create constraint that each event dependency task instance can only have 1 source task instance
+                # Iterate over destination task instances
                 lp.writeTaskDependencyContraint(srcTask, destTask, destTaskInstances, srcTaskInstances)
 
             lp.write(lp.endToEndConstraints)
             lp.writeObjectiveEquation()
 
             for key in limitEndtoEndConstraint:
-                #The constraintReductionList contains dependency instance pairs of the currently processing dependency
+                # The constraintReductionList contains dependency instances pairs of the currently processing dependency to improve the end-to-end time
+                # Tighten the constraint for this dependency to see if there are tighter better solutions
                 if gurobi:
                     if (key in constraintReductionList):
                         lp.write(key + " <= " + str(limitEndtoEndConstraint[key]-1) + "\n")
@@ -232,47 +249,56 @@ def lpScheduler(system):
                     else:
                         lp.write(key + " <= " + str(limitEndtoEndConstraint[key]) + ";\n")
 
-            #lp.write(sumOfEndTimeString + " = "+ str(commutativeEndtime) +";\n")
+            # Create boolean variable constraint
             lp.writeBooleanConstraints()
 
-            #ILP problem becomes very hard if large integer is used.
+            # Commented out so that unknown variables are left as real numbers rather then integers.
+            # No need to restrict problem to ILP state space as it will cause unesscessary complexity
             #for i in intVaraibles:
             #    lp.write("int "+ i + ";\n")
 
-
             lp.close()
 
+            # call solvers
             if gurobi:
                 results, lines = CallGurobi()
-                #print(results)
             else:
                 results, lines = CallLPSolve()
             print("Results:\n---")
             
             if len(results) == 0 :
+                # If there are no results then the problem must be infeasible
                 print("Problem not feasible.")
+                
+                # No need to try and tighten an infesaible problem
                 lookingForOptimalSolution = False
                 limitEndtoEndConstraint = {}
             else:
+                # Problem is feasible
                 print("Problem feasible.")
                 print("Current best end-to-end total: "+ str(results["endToEndTime"]))
+                
+                # Parse result schedule from LP solution
                 limitEndtoEndConstraint, constraintReductionList = parseLPSolveResults(limitEndtoEndConstraint, currentProcessingDependency, lp, results)       
-                #Export Schedule
+                
+                # Store the currently best schedule
                 schedule = exportSchedule(system, schedule, lp, allTaskInstances, results)
                 lastFeasibleSchedule = schedule.copy()
                 print("---\n")
-        #if all instances have the same offset there is no point to iterate for a solution as all solutions are the same        
+                
+            #if all instances have the same offset there is no point to iterate for a solution as all solutions are the same as any solution is as good as another
             if (sameLETForAllInstances) :
                 lookingForOptimalSolution = False
         if (sameLETForAllInstances) :
             break
+            
     print("Ran "+str(timesRan) + " times")
     return lastFeasibleSchedule
 
 def parseLPSolveResults(limitEndtoEndConstraint, currentProcessingDependency, lp, results):
     currentWorstChainTimes = {}
 
-    #get current worst case end to end times for each task pair dependency
+    # Get current worst case end-to-end times for each task pair dependency
     for chain in lp.endToEndTaskTable.keys():
         constraints = lp.endToEndTaskTable[chain]
         for key in results.keys():
@@ -328,39 +354,43 @@ def exportSchedule(system, schedule, lp, allTaskInstances, results):
         schedule["TaskInstancesStore"].append(taskInstancesJson)
     return schedule
 
+
+
+# Call Gurobi solver and parse result
 def CallGurobi():
     results = {}
     with subprocess.Popen(["gurobi_cl",'ResultFile=gurobiresult.sol','system.lp'], stdout=subprocess.PIPE) as proc:
         output = proc.stdout.read().decode("utf-8") 
         if "Model is infeasible" in output:
             return {}, {}
-        f = open("gurobiresult.sol", "r")
-        data = f.read()
-        lines = data.split("\n")
+        else:
+            f = open("gurobiresult.sol", "r")
+            data = f.read()
+            lines = data.split("\n")
 
-        for l in lines:
-            if (len(l) == 0):
-                continue
-            fragment = re.split('\s+', l)
-            results[fragment[0]] = fragment[1]
+            for l in lines:
+                if (len(l) == 0):
+                    continue
+                fragment = re.split('\s+', l)
+                results[fragment[0]] = fragment[1] # Create dictionary of variable and its solutions
     return results,lines
 
+# Call LPSolve solver and parse result
 def CallLPSolve():
     results = {}
-
     with subprocess.Popen(["lp_solve_5.5.2.11_exe_win64\lp_solve.exe",'system.lp','-ip'], stdout=subprocess.PIPE) as proc:
         output = proc.stdout.read().decode("utf-8") 
         #print(output)
         if "This problem is infeasible" in output:
             return {}, {}
-        lines = output.split("\r\n")
-        for l in lines:
-            if (len(l) == 0):
-                continue
-            fragment = re.split('\s+', l)
-            results[fragment[0]] = fragment[1]
+        else:
+            lines = output.split("\r\n")
+            for l in lines:
+                if (len(l) == 0):
+                    continue
+                fragment = re.split('\s+', l)
+                results[fragment[0]] = fragment[1]  # Create dictionary of variable and its solutions
     return results,lines
-
 
 
 
@@ -371,12 +401,15 @@ if __name__ == '__main__':
     parser.add_argument('-lpsolve', action='store_true')
     args = parser.parse_args()
     
+    # select contraint type
     if args.lpsolve:
         gurobi = False
         print("Solver LPsolve")
     else:
+        gurobi = True
         print("Solver Gruobi")
 
+    # Specify the LET system file to create schedule for, or run in webserver mode for the plugin.
     if len(args.f) > 0:
         f = open(args.f)
         system = json.load(f)
