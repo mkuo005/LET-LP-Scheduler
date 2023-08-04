@@ -1,5 +1,5 @@
 # LET-LP-Scheduler
-Logical Execution Time Linear Programming Scheduler is an [external plugin](https://github.com/eyip002/LetSynchronise/blob/master/sources/plugins/ls.plugin.goal.ilp.js) for the [LetSynchronise](https://github.com/eyip002/LetSynchronise) framework that computes an optimal schedule for overall system end-to-end response times.  
+Logical Execution Time Linear Programming Scheduler is an [external plugin](https://github.com/uniba-swt/LetSynchronise/blob/master/sources/plugins/ls.plugin.goal.ilp.js) for the [LetSynchronise](https://github.com/uniba-swt/LetSynchronise) framework that computes an optimal schedule for overall system end-to-end response times.  
 
 ## Dependencies
 * Python 3
@@ -26,4 +26,4 @@ Logical Execution Time Linear Programming Scheduler is an [external plugin](http
 The LET-LP-Scheduler communicates with LetSynchronise via `localhost` on port `8181`. The address can be changed, but this has to be reflect in the address setup defined in the LetSynchronise plugin [`ls.plugin.goal.ilp.js`](https://github.com/uniba-swt/LetSynchronise/blob/master/sources/plugins/ls.plugin.goal.ilp.js).
 
 ### Server Requests
-The LET-LP-Scheduler uses post requests to service a scheduling request. The body of a post request contains a LetSynchronise system model in JSON format ([examples](https://github.com/eyip002/LetSynchronise/tree/master/examples)) with `'Makespan' : int` at the top level.
+The LET-LP-Scheduler uses post requests to service a scheduling request. The body of a post request contains a LetSynchronise system model in JSON format ([examples](https://github.com/uniba-swt/LetSynchronise/blob/master/examples)) with `'Makespan' : int` at the top level.

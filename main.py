@@ -48,7 +48,9 @@ Config = SimpleNamespace(
 # Restrict that all instances of a task have the same LET parameters
 sameLETForAllInstances = True
 
-# Webserver to handle requests from LetSyncrhonise LP plugin
+# Web server to handle requests from LetSyncrhonise LP plugin, 
+# ls.plugin.goal.ilp.js
+# https://github.com/uniba-swt/LetSynchronise/blob/master/sources/plugins/ls.plugin.goal.ilp.js
 class Server(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
         # Allow cross origin headers
