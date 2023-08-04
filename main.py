@@ -99,10 +99,9 @@ class Server(BaseHTTPRequestHandler):
         except FileNotFoundError as error:
             self._set_error_headers(error)
             return
-#        except Exception as error:
-#            print(error)
-#            self._set_error_headers("LetSynchronise system model could not be scheduled")
-#            return
+        except Exception as error:
+            self._set_error_headers(f"LetSynchronise system model could not be scheduled: {error}")
+            return
         
         if (schedule == None):
             self._set_error_headers("LetSynchronise system model is unsupported")
@@ -404,15 +403,18 @@ def CallGurobi():
     results = {}
     lines = []
     with subprocess.Popen([Config.solverProg, "ResultFile=gurobiresult.sol", Config.lpFile], stdout=subprocess.PIPE) as proc:
-        output = proc.stdout.read().decode("utf-8") 
-        if not "Model is infeasible" in output:
-            data = open("gurobiresult.sol", "r").read()
-            lines = data.splitlines()
-            for line in lines:
-                if (len(line) == 0):
-                    continue
-                fragment = re.split('\s+', line)
-                results[fragment[0]] = fragment[1] # Create dictionary of variables and their solutions
+        output = proc.stdout.read().decode("utf-8")
+        if "Model is infeasible" in output:
+            print("LP problem is infeasible!")
+            raise Exception("LP problem is infeasible!")
+        
+        data = open("gurobiresult.sol", "r").read()
+        lines = data.splitlines()
+        for line in lines:
+            if (len(line) == 0):
+                continue
+            fragment = re.split('\s+', line)
+            results[fragment[0]] = fragment[1] # Create dictionary of variables and their solutions
     return results, lines
 
 # Call LpSolve and parse the result
@@ -420,14 +422,17 @@ def CallLPSolve():
     results = {}
     lines = []
     with subprocess.Popen([Config.solverProg, Config.lpFile, '-ip'], stdout=subprocess.PIPE) as proc:
-        output = proc.stdout.read().decode("utf-8") 
-        if not "This problem is infeasible" in output:
-            lines = output.splitlines()
-            for line in lines:
-                if (len(line) == 0):
-                    continue
-                fragment = re.split('\s+', line)
-                results[fragment[0]] = fragment[1]  # Create dictionary of variables and their solutions
+        output = proc.stdout.read().decode("utf-8")
+        if "This problem is infeasible" in output:
+            print("LP problem is infeasible!")
+            raise Exception("LP problem is infeasible!")
+        
+        lines = output.splitlines()
+        for line in lines:
+            if (len(line) == 0):
+                continue
+            fragment = re.split('\s+', line)
+            results[fragment[0]] = fragment[1]  # Create dictionary of variables and their solutions
     return results, lines
 
 
