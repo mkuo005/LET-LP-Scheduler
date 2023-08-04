@@ -17,14 +17,13 @@ import re
 from enum import Enum
 from types import SimpleNamespace
 
-# Import LPSolve constraint generator
-from LPWriter import LPWriter
+# Import LpSolve constraint generator
+from LpSolveLPWriter import LpSolveLPWriter
 
 # Import Gurobi constraint generator
 from GurobiLPWriter import GurobiLPWriter
 
 # Tool configurations
-
 class Solver(Enum):
     NONE = 0
     GUROBI = 1
@@ -172,7 +171,7 @@ def lpScheduler(system):
             if Config.solver == Solver.GUROBI: 
                 lp = GurobiLPWriter(Config.lpFile, veryLargeNumber)
             elif Config.solver == Solver.LPSOLVE:
-                lp = LPWriter(Config.lpFile, veryLargeNumber)
+                lp = LpSolveLPWriter(Config.lpFile, veryLargeNumber)
 
             # Create the objective to minimize End-To-End time
             lp.writeObjective("endToEndTime")
@@ -211,8 +210,8 @@ def lpScheduler(system):
                     lp.writeTaskInstanceExecutionBounds(str(taskName), inst, instanceStartTime, instanceDeadline, taskWCET[taskName], sameLETForAllInstances)
 
                     # The append list of unknown integer variables with the instance start and end times
-                    lp.intVaraibles.append("U"+inst + "_end_time")
-                    lp.intVaraibles.append("U"+inst + "_start_time")
+                    lp.intVariables.append("U"+inst + "_end_time")
+                    lp.intVariables.append("U"+inst + "_start_time")
                     i = i + 1
                 
                 # Maintain a list of instances assoicated to a task

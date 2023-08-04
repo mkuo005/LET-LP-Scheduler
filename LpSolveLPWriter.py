@@ -1,11 +1,11 @@
-class LPWriter:
+class LpSolveLPWriter:
     def __init__(self, filename, veryLargeNumber):
         self.filename = filename
         self.file = open(filename, "w")
         #list of all boolean variables used
         self.booleanVariables = []
         #list of all integer variables used
-        self.intVaraibles = []
+        self.intVariables = []
         self.veryLargeNumber = veryLargeNumber
         self.endToEndTaskTable = {}
         self.endToEndTimeSummation = ""
