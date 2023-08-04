@@ -4,3 +4,5 @@ system.lp
 __pycache__/
 gurobiresult.sol
 gurobi.log
+
+.DS_Store

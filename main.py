@@ -1,19 +1,21 @@
 """
-This projects converts LetSyncrhonise tasks into linear programming constraints to find an optiminal schedule
+This program converts a LetSyncrhonise system model into a set of linear programming 
+constraints that can be solved to find an optimal schedule.
 """
-
 
 # Import web server libraries
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import socketserver 
 
 # Import the required libraries
-import time
+import sys
 import argparse
 import json
 import math
 import subprocess
 import re
+from enum import Enum
+from types import SimpleNamespace
 
 # Import LPSolve constraint generator
 from LPWriter import LPWriter
@@ -23,52 +25,90 @@ from GurobiLPWriter import GurobiLPWriter
 
 # Tool configurations
 
-# Use Gurobi styled LP constraints
-gurobi = True
+class Solver(Enum):
+    NONE = 0
+    GUROBI = 1
+    LPSOLVE = 2
+
+SolverProg = [
+    "none",
+    "gurobi_cl",
+    "lp_solve"
+]
+
+Config = SimpleNamespace(
+    hostName = "localhost",
+    serverPort = 8181,
+    solver = Solver.NONE,
+    solveProg = "",
+    os = "",
+    exeSuffix = "",
+    lpFile = "system.lp"
+)
 
 # Restrict that all instances of a task have the same LET parameters
 sameLETForAllInstances = True
 
 # Webserver to handle requests from LetSyncrhonise LP plugin
-class server(BaseHTTPRequestHandler):
+class Server(BaseHTTPRequestHandler):
     def do_OPTIONS(self):
-        #Allow cross origin headers
+        # Allow cross origin headers
         self.send_response(200, "ok")
-        self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS, POST')
+        self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS, POST")
         self.send_header("Access-Control-Allow-Headers", "X-Requested-With")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
         
-    def end_headers (self):
-        #Allow cross origin headers
-        self.send_header('Access-Control-Allow-Origin', '*')
+    def end_headers(self):
+        # Allow cross origin headers
+        self.send_header("Access-Control-Allow-Origin", "*")
         BaseHTTPRequestHandler.end_headers(self)
         
     def _set_headers(self):
         self.send_response(200)
-        self.send_header('Content-Type', 'application/json')
+        self.send_header("Content-Type", "application/json")
         self.end_headers()
         
-    def _set_error_headers(self):
-        self.send_response(501, "Scheduler does not support posted LET system")
-        self.send_header('Content-type', 'text/html')
+    def _set_error_headers(self, message):
+        self.send_response(501, message)
+        self.send_header("Content-type", "text/html")
         self.end_headers()
         
     def do_GET(self):
         self._set_headers()
-        self.wfile.write("received get request")
+        self.wfile.write(bytes("LET-LP-Scheduler", "utf-8"))
         
+    # FIXME: Add descriptive errors!!!
     def do_POST(self):
-        '''Reads post request body'''
-        content_len = int(self.headers.get('content-length'))
-        post_body = self.rfile.read(content_len)
-        system = json.loads(post_body.decode("utf-8"))
-        schedule = lpScheduler(system)
+        '''Reads POST request body'''
+        try:
+            content_len = int(self.headers.get("content-length"))
+            post_body = self.rfile.read(content_len)
+        except Exception:
+            self._set_error_headers("LetSynchronise system model could not be read")
+            return
+        
+        try:
+            system = json.loads(post_body.decode("utf-8"))
+        except Exception:
+            self._set_error_headers("LetSynchronise system model could not be loaded")
+            return
+        
+        try:
+            schedule = lpScheduler(system)
+        except FileNotFoundError as error:
+            self._set_error_headers(error)
+            return
+#        except Exception as error:
+#            print(error)
+#            self._set_error_headers("LetSynchronise system model could not be scheduled")
+#            return
+        
         if (schedule == None):
-            self._set_error_headers()
+            self._set_error_headers("LetSynchronise system model is unsupported")
         else:
             self._set_headers()
-            self.wfile.write(bytes(json.dumps(schedule),"utf-8"))
+            self.wfile.write(bytes(json.dumps(schedule), "utf-8"))
 
     def do_PUT(self):
         self.do_POST();
@@ -83,7 +123,7 @@ def lpScheduler(system):
         "DependencyInstancesStore" : [], 
         "EventChainInstanceStore" : [],
         "TaskInstancesStore" : []
-        }
+    }
 
     # Store latest fesible schedule
     lastFeasibleSchedule = schedule.copy()
@@ -121,9 +161,9 @@ def lpScheduler(system):
 
     # Variable to track number of iterations to find solution    
     timesRan = 0
-    print("Initial Run ...")
+    print()
 
-    # Illiterate through each dependency and try to tighten the worst case end-to-end time
+    # Iterate through each dependency and try to tighten the worst case end-to-end time
     for currentProcessingDependency in taskDependenciesList:
 
         # Keep iterating ILP solver until no further optimisations can be found
@@ -131,14 +171,14 @@ def lpScheduler(system):
         # List of ILP constraint used to tighten the current dependency
         constraintReductionList = []
         while(lookingForOptimalSolution):
-            print("Run ... "+currentProcessingDependency)
+            print(f"Iteration {timesRan} ... {currentProcessingDependency}")
             timesRan = timesRan + 1
 
             # Create LP writer for the selected solver
-            if gurobi: 
-                lp = GurobiLPWriter("system.lp", veryLargeNumber)
-            else:
-                lp = LPWriter("system.lp", veryLargeNumber)
+            if Config.solver == Solver.GUROBI: 
+                lp = GurobiLPWriter(Config.lpFile, veryLargeNumber)
+            elif Config.solver == Solver.LPSOLVE:
+                lp = LPWriter(Config.lpFile, veryLargeNumber)
 
             # Create the objective to minimize End-To-End time
             lp.writeObjective("endToEndTime")
@@ -238,12 +278,12 @@ def lpScheduler(system):
             for key in limitEndtoEndConstraint:
                 # The constraintReductionList contains dependency instances pairs of the currently processing dependency to improve the end-to-end time
                 # Tighten the constraint for this dependency to see if there are tighter better solutions
-                if gurobi:
+                if Config.solver == Solver.GUROBI:
                     if (key in constraintReductionList):
                         lp.write(key + " <= " + str(limitEndtoEndConstraint[key]-1) + "\n")
                     else:
                         lp.write(key + " <= " + str(limitEndtoEndConstraint[key]) + "\n")
-                else:
+                elif Config.solver == Solver.LPSOLVE:
                     if (key in constraintReductionList):
                         lp.write(key + " <= " + str(limitEndtoEndConstraint[key]-1) + ";\n")
                     else:
@@ -253,46 +293,49 @@ def lpScheduler(system):
             lp.writeBooleanConstraints()
 
             # Commented out so that unknown variables are left as real numbers rather then integers.
-            # No need to restrict problem to ILP state space as it will cause unesscessary complexity
-            #for i in intVaraibles:
+            # No need to restrict problem to ILP state space as it will cause unnesscessary complexity
+            #for i in intVariables:
             #    lp.write("int "+ i + ";\n")
 
             lp.close()
 
             # call solvers
-            if gurobi:
+            if Config.solver == Solver.GUROBI:
                 results, lines = CallGurobi()
-            else:
+            elif Config.solver == Solver.LPSOLVE:
                 results, lines = CallLPSolve()
-            print("Results:\n---")
+            print()
+            print("Results:")
+            print("--------")
             
             if len(results) == 0 :
                 # If there are no results then the problem must be infeasible
-                print("Problem not feasible.")
+                print("Problem is infeasible")
                 
-                # No need to try and tighten an infesaible problem
+                # No need to try and tighten an infeasible problem
                 lookingForOptimalSolution = False
                 limitEndtoEndConstraint = {}
             else:
                 # Problem is feasible
-                print("Problem feasible.")
-                print("Current best end-to-end total: "+ str(results["endToEndTime"]))
+                print("Problem is feasible")
+                print(f"Current summation of end-to-end times: {results['endToEndTime']} ns")
                 
-                # Parse result schedule from LP solution
+                # Create the task schedule from the LP solution
                 limitEndtoEndConstraint, constraintReductionList = parseLPSolveResults(limitEndtoEndConstraint, currentProcessingDependency, lp, results)       
                 
-                # Store the currently best schedule
+                # Export the best task schedule
                 schedule = exportSchedule(system, schedule, lp, allTaskInstances, results)
                 lastFeasibleSchedule = schedule.copy()
-                print("---\n")
+                print("--------")
                 
-            #if all instances have the same offset there is no point to iterate for a solution as all solutions are the same as any solution is as good as another
-            if (sameLETForAllInstances) :
+            # If all instances have the same offset there is no point to iterate for a solution as all solutions are the same as any solution is as good as another
+            if sameLETForAllInstances:
                 lookingForOptimalSolution = False
-        if (sameLETForAllInstances) :
+
+        if sameLETForAllInstances:
             break
             
-    print("Ran "+str(timesRan) + " times")
+    print(f"Iterated a total of {timesRan} times")
     return lastFeasibleSchedule
 
 def parseLPSolveResults(limitEndtoEndConstraint, currentProcessingDependency, lp, results):
@@ -356,69 +399,73 @@ def exportSchedule(system, schedule, lp, allTaskInstances, results):
 
 
 
-# Call Gurobi solver and parse result
+# Call Gurobi and parse the result
 def CallGurobi():
     results = {}
-    with subprocess.Popen(["gurobi_cl",'ResultFile=gurobiresult.sol','system.lp'], stdout=subprocess.PIPE) as proc:
+    lines = []
+    with subprocess.Popen([Config.solverProg, "ResultFile=gurobiresult.sol", Config.lpFile], stdout=subprocess.PIPE) as proc:
         output = proc.stdout.read().decode("utf-8") 
-        if "Model is infeasible" in output:
-            return {}, {}
-        else:
-            f = open("gurobiresult.sol", "r")
-            data = f.read()
-            lines = data.split("\n")
-
-            for l in lines:
-                if (len(l) == 0):
+        if not "Model is infeasible" in output:
+            data = open("gurobiresult.sol", "r").read()
+            lines = data.splitlines()
+            for line in lines:
+                if (len(line) == 0):
                     continue
-                fragment = re.split('\s+', l)
-                results[fragment[0]] = fragment[1] # Create dictionary of variable and its solutions
-    return results,lines
+                fragment = re.split('\s+', line)
+                results[fragment[0]] = fragment[1] # Create dictionary of variables and their solutions
+    return results, lines
 
-# Call LPSolve solver and parse result
+# Call LpSolve and parse the result
 def CallLPSolve():
     results = {}
-    with subprocess.Popen(["lp_solve_5.5.2.11_exe_win64\lp_solve.exe",'system.lp','-ip'], stdout=subprocess.PIPE) as proc:
+    lines = []
+    with subprocess.Popen([Config.solverProg, Config.lpFile, '-ip'], stdout=subprocess.PIPE) as proc:
         output = proc.stdout.read().decode("utf-8") 
-        #print(output)
-        if "This problem is infeasible" in output:
-            return {}, {}
-        else:
-            lines = output.split("\r\n")
-            for l in lines:
-                if (len(l) == 0):
+        if not "This problem is infeasible" in output:
+            lines = output.splitlines()
+            for line in lines:
+                if (len(line) == 0):
                     continue
-                fragment = re.split('\s+', l)
-                results[fragment[0]] = fragment[1]  # Create dictionary of variable and its solutions
-    return results,lines
+                fragment = re.split('\s+', line)
+                results[fragment[0]] = fragment[1]  # Create dictionary of variables and their solutions
+    return results, lines
 
 
 
 if __name__ == '__main__':
-    print("Start LP Scheduler")
+    print("LET-LP-Scheduler")
+    print("----------------")
     parser = argparse.ArgumentParser()
-    parser.add_argument("-f", type=str, default="")
-    parser.add_argument('-lpsolve', action='store_true')
+    parser.add_argument("--file", type=str, default="")
+    parser.add_argument("--solver", choices=["gurobi", "lpsolve"], type=str, required=True)
     args = parser.parse_args()
     
-    # select contraint type
-    if args.lpsolve:
-        gurobi = False
-        print("Solver LPsolve")
-    else:
-        gurobi = True
-        print("Solver Gruobi")
+   # Set the OS and executable file suffix
+    Config.os = sys.platform
+    if Config.os == "win32":
+        Config.exeSuffix = ".exe"
+    
+    # Set the LP solver
+    if args.solver == "lpsolve":
+        Config.solver = Solver.LPSOLVE
+        Config.solverProg = SolverProg[Solver.LPSOLVE.value] + Config.exeSuffix
+    elif args.solver == "gurobi":
+        Config.solver = Solver.GUROBI
+        Config.solverProg = SolverProg[Solver.GUROBI.value]
+    print(f"Solver: {Config.solverProg}")
 
-    # Specify the LET system file to create schedule for, or run in webserver mode for the plugin.
-    if len(args.f) > 0:
-        f = open(args.f)
-        system = json.load(f)
-        lpScheduler(system)
+    # Specify a LET system model file and create a schedule, or run in webserver mode for the LetSynchronise plugin.
+    if len(args.file) > 0:
+        try:
+            file = open(args.file)
+            system = json.load(file)
+            lpScheduler(system)
+        except FileNotFoundError:
+            print(f"Unable to open \"{args.file}\"!")
     else:
-        hostName = "localhost"
-        serverPort = 8181
-        webServer = ThreadingHTTPServer((hostName, serverPort), server)
-        print("Server started http://%s:%s" % (hostName, serverPort))
+        webServer = ThreadingHTTPServer((Config.hostName, Config.serverPort), Server)
+        print(f"Server started at http://{Config.hostName}:{Config.serverPort}")
+        print()
 
         try:
             webServer.serve_forever()
@@ -426,5 +473,5 @@ if __name__ == '__main__':
             pass
             
         webServer.server_close()
-        print("Server stopped.")
+        print("Server stopped")
     
