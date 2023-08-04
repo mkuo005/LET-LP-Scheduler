@@ -103,11 +103,8 @@ class Server(BaseHTTPRequestHandler):
             self._set_error_headers(f"LetSynchronise system model could not be scheduled: {error}")
             return
         
-        if (schedule == None):
-            self._set_error_headers("LetSynchronise system model is unsupported")
-        else:
-            self._set_headers()
-            self.wfile.write(bytes(json.dumps(schedule), "utf-8"))
+        self._set_headers()
+        self.wfile.write(bytes(json.dumps(schedule), "utf-8"))
 
     def do_PUT(self):
         self.do_POST();
@@ -119,8 +116,6 @@ def lpScheduler(system):
     
     # Initial empty schedule
     schedule = {
-        "DependencyInstancesStore" : [], 
-        "EventChainInstanceStore" : [],
         "TaskInstancesStore" : []
     }
 
@@ -367,9 +362,9 @@ def exportSchedule(system, schedule, lp, allTaskInstances, results):
         if (t['name']== "__system"):
             continue
         taskInstancesJson = {
-                            "name" : t["name"],
-                            "initialOffset" : 0,
-                            }
+            "name" : t["name"],
+            "initialOffset" : 0,
+        }
         instances = allTaskInstances[t['name']]
         instancesLS = []
         i = 0 
@@ -383,7 +378,7 @@ def exportSchedule(system, schedule, lp, allTaskInstances, results):
                             "periodStartTime" : round(float((i * int(t['period'])))),
                             "letStartTime" : round(float(starttime)),
                             "letEndTime" : round(float(endtime)),
-                            "periodEndTime" : round(float((i+1) * int(t['period']))),
+                            "periodEndTime" : round(float((i + 1) * int(t['period']))),
                             "executionTime": t['wcet'],
                             "executionIntervals": [ {
                                 "startTime": round(float(starttime)),
