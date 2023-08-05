@@ -5,9 +5,9 @@ class GurobiLPWriter:
         self.objectiveVariable = objectiveVariable
         self.lpLargeConstant = lpLargeConstant
         
-        self.endToEndTaskTable = {}
-        self.endToEndTimeSummation = ""
-        self.endToEndConstraints = ""
+        self.dependencyTaskTable = {}
+        self.dependencyDelaysSum = ""
+        self.dependencyConstraints = ""
         
         #list of all boolean variables used
         self.booleanVariables = []
@@ -22,33 +22,38 @@ class GurobiLPWriter:
         self.file.write("Subject To\n")
 
     def writeObjectiveEquation(self):
-        self.file.write(f"{self.objectiveVariable} {self.endToEndTimeSummation} = 0;\n")
+        self.file.write(f"{self.objectiveVariable} {self.dependencyDelaysSum} = 0;\n")
 
     def writeComment(self, string):
         None
 
     def taskInstStartTime(self, taskInstance):
-        return "U"+taskInstance + "_start_time"
+        return f"U{taskInstance}_start_time"
     
     def taskInstEndTime(self, taskInstance):
-        return "U"+taskInstance + "_end_time"
+        return f"U{taskInstance}_end_time"
 
-    def writeTaskInstanceExecutionBounds(self, taskName, taskInstance, instanceStartTime, instanceDeadline, wcet, sameLETForAllInstances):
-        #task have to start after the period
-        self.file.write(self.taskInstStartTime(taskInstance) + " >= "+ str(instanceStartTime) + "\n")
-        #task have to end before the period
-        self.file.write(self.taskInstEndTime(taskInstance) + " <= "+ str(instanceDeadline) + "\n")
+    # FIXME: Tailor constraints based on whether each task instance can have its own task parameters
+    def writeTaskInstanceExecutionBounds(self, taskName, taskInstance, instanceStartTime, instanceEndTime, wcet, sameLETForAllInstances):
+        # Add to list of unknown integer variables with the instance start and end times
+        self.intVariables.append(self.taskInstStartTime(taskInstance))
+        self.intVariables.append(self.taskInstEndTime(taskInstance))
 
-        #task execution time need to be larger or equal to wcet
-        #Instance end time minus start time must be larger than wcet
-        self.file.write(self.taskInstEndTime(taskInstance) + " - "+ self.taskInstStartTime(taskInstance) + " >= " + str(wcet) + "\n")
+        # Task execution has to start at or after the period
+        self.file.write(f"{self.taskInstStartTime(taskInstance)} >= {instanceStartTime};\n")
+        
+        # Task execution has to end at or before the period
+        self.file.write(f"{self.taskInstEndTime(taskInstance)} <= {instanceEndTime};\n")
+
+        # Task execution time has to be greater than or equal to wcet
+        self.file.write(f"{self.taskInstEndTime(taskInstance)} - {self.taskInstStartTime(taskInstance)} >= {wcet};\n")
 
         if (sameLETForAllInstances):
             #Make sure all LET instances start and end at the same time
             self.file.write(self.taskInstStartTime(taskInstance) + " - "+ self.taskInstStartTime(taskName) + " = " + str(instanceStartTime) + ";\n")
             self.file.write(self.taskInstEndTime(taskInstance) + " - "+ self.taskInstEndTime(taskName) + " = " + str(instanceStartTime) + ";\n")
 
-    def writeTaskOverlapContraint(self, currentTaskInst, otherTaskInst):
+    def writeTaskOverlapConstraint(self, currentTaskInst, otherTaskInst):
         controlVariable = "control"+currentTaskInst+"_"+otherTaskInst
         self.booleanVariables.append(controlVariable)
 
@@ -58,7 +63,7 @@ class GurobiLPWriter:
         self.file.write(self.taskInstEndTime(currentTaskInst)+ " - " + self.taskInstStartTime(otherTaskInst)   + " - " + str(self.lpLargeConstant) + " " + controlVariable + " <= 0" + "\n")
         self.file.write(self.taskInstEndTime(otherTaskInst)  + " - " + self.taskInstStartTime(currentTaskInst) + " + " + str(self.lpLargeConstant) + " " + controlVariable + " <= "+str(self.lpLargeConstant)  + "\n")
 
-    def writeTaskDependencyContraint(self, srcTask, destTask, destTaskInstances, srcTaskInstances):
+    def writeTaskDependencyConstraint(self, srcTask, destTask, destTaskInstances, srcTaskInstances):
         for destInst in destTaskInstances:
             srcInstString = ""
             first = True
@@ -82,17 +87,17 @@ class GurobiLPWriter:
                 self.file.write(self.taskInstEndTime(srcInst) + " - " + self.taskInstStartTime(destInst) + " + " +str(self.lpLargeConstant) +" "+ instanceConnectionControl + " <= " + str(self.lpLargeConstant) + "\n")
                 
                 #append this dependency end-to-end time to total end-to-end time of the system
-                self.endToEndTimeSummation += " - "
+                self.dependencyDelaysSum += " - "
 
-                self.endToEndConstraints += "EtoE_"+ endToEndConstraintID + " >= 0\n"
+                self.dependencyConstraints += "EtoE_"+ endToEndConstraintID + " >= 0\n"
                 X = self.taskInstEndTime(destInst) + " - " + self.taskInstStartTime(srcInst)
-                self.endToEndConstraints += X +" + "+str(self.lpLargeConstant)+" " +instanceConnectionControl + " - " + "EtoE_"+ endToEndConstraintID + " <= " + str(self.lpLargeConstant)  +"\n"
-                self.endToEndConstraints += X +" - "+str(self.lpLargeConstant)+" " +instanceConnectionControl + " - " + "EtoE_"+ endToEndConstraintID + " >= " +" -"+str(self.lpLargeConstant) +"\n"
+                self.dependencyConstraints += X +" + "+str(self.lpLargeConstant)+" " +instanceConnectionControl + " - " + "EtoE_"+ endToEndConstraintID + " <= " + str(self.lpLargeConstant)  +"\n"
+                self.dependencyConstraints += X +" - "+str(self.lpLargeConstant)+" " +instanceConnectionControl + " - " + "EtoE_"+ endToEndConstraintID + " >= " +" -"+str(self.lpLargeConstant) +"\n"
                                 
                 #a simple sum of the difference will be optimising the average - need to think...
-                self.endToEndTimeSummation += "EtoE_"+ endToEndConstraintID
+                self.dependencyDelaysSum += "EtoE_"+ endToEndConstraintID
                 taskDependencyPair = srcTask+"_"+destTask
-                self.endToEndTaskTable[taskDependencyPair].append("EtoE_"+ endToEndConstraintID)     
+                self.dependencyTaskTable[taskDependencyPair].append("EtoE_"+ endToEndConstraintID)     
                                 
             #There can only be one source
             self.file.write(srcInstString+" = 1\n")

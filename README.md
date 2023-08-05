@@ -4,6 +4,8 @@ Logical Execution Time Linear Programming Scheduler is an [external plugin](http
 Limitations:
 * The task schedule is analysed over a scheduling window, starting at 0 ns and ending at the makespan, rounded up to the next hyper-period. End-to-end constraints where none of their instances appears within the scheduling window are not optimised.
 * Can only indirectly minimise the overall end-to-end response times of all event chains.
+* Tasks are scheduled non-preemptively.
+* Tasks are scheduled on a single-core processor.
 
 ## Dependencies
 * Python 3

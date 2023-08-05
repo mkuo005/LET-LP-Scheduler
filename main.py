@@ -186,50 +186,44 @@ def lpScheduler(system):
                 taskWcet = task['wcet']
                 taskPeriod = task['period']
                 
-                lp.writeComment(f"Properties for task {taskName}")
+                lp.writeComment(f"Task instance properties of {taskName}")
                 
                 # Create the task instances that appear inside the scheduling window
                 instances = []
-                i = 0
                 for instanceStartTime in range(0, schedulingWindow, taskPeriod):
                     # Task instances will be named by incrementing an integer index
-                    instanceName = f"{taskName}_{i}"
+                    instanceName = f"{taskName}_{len(instances)}"
                     instances.append(instanceName)
 
                     # Compute task instance end time
                     instanceEndTime = instanceStartTime + taskPeriod
                     
                     # Encode the execution bounds of the task instance in LP constraints
-                    lp.writeTaskInstanceExecutionBounds(str(taskName), instanceName, instanceStartTime, instanceEndTime, taskWcet, sameLETForAllInstances)
-
-                    # The append list of unknown integer variables with the instance start and end times
-                    lp.intVariables.append("U"+instanceName + "_end_time")
-                    lp.intVariables.append("U"+instanceName + "_start_time")
-                    i = i + 1
+                    lp.writeTaskInstanceExecutionBounds(taskName, instanceName, instanceStartTime, instanceEndTime, taskWcet, sameLETForAllInstances)
                 
-                # Maintain a list of instances assoicated to a task
+                # Maintain a list of instances for each task
                 allTaskInstances[taskName] = instances
             
             # create a copy of all task instances for manipulation
             copyAllTaskInstances = allTaskInstances.copy()
 
-            lp.writeComment("Make sure tasks do not overlap in execution")
+            lp.writeComment("Make sure task executions do not overlap")
 
             # Go over each task and make sure the task instances do not overlap in execution (single core)
             for task in system['TaskStore']:
                 # Get all instances of that task
                 instances = copyAllTaskInstances.pop(task['name'])
-                for inst in instances:
+                for instance in instances:
                     for key in copyAllTaskInstances.keys():
                         for other in copyAllTaskInstances[key]:
-                            lp.writeTaskOverlapContraint(inst, other)
+                            lp.writeTaskOverlapConstraint(instance, other)
                             
                             
-            lp.endToEndTimeSummation = ""
-            lp.writeComment("Each destination task instance of an event chain can only be connected to one source")
+            lp.dependencyDelaysSum = ""
+            lp.writeComment("Each destination task instance of a dependency can only be connected to one source")
             
-            lp.endToEndConstraints = ""
-            lp.endToEndTaskTable = {}
+            lp.dependencyConstraints = ""
+            lp.dependencyTaskTable = {}
 
             # Iterate over each dependency
             for dependency in system['DependencyStore']:
@@ -239,7 +233,7 @@ def lpScheduler(system):
                 srcTask = dependency['source']['task']
                 destTask = dependency['destination']['task']
 
-                # If the dependency is to the environment then ignore as there the environment can be sampled/emitted to anytime
+                # Dependencies to the environment are left unconstrained.
                 if (srcTask == '__system' or destTask == '__system'):
                     continue
 
@@ -251,13 +245,13 @@ def lpScheduler(system):
                 lp.writeComment(name)
                 taskDependencyPair = srcTask+"_"+destTask
 
-                lp.endToEndTaskTable[taskDependencyPair] = []
+                lp.dependencyTaskTable[taskDependencyPair] = []
 
                 # Create constraint that each event dependency task instance can only have 1 source task instance
                 # Iterate over destination task instances
-                lp.writeTaskDependencyContraint(srcTask, destTask, destTaskInstances, srcTaskInstances)
+                lp.writeTaskDependencyConstraint(srcTask, destTask, destTaskInstances, srcTaskInstances)
 
-            lp.write(lp.endToEndConstraints)
+            lp.write(lp.dependencyConstraints)
             lp.writeObjectiveEquation()
 
             for key in limitEndtoEndConstraint:
@@ -327,62 +321,62 @@ def parseLPSolveResults(limitEndtoEndConstraint, currentProcessingDependency, lp
     currentWorstChainTimes = {}
 
     # Get current worst case end-to-end times for each task pair dependency
-    for chain in lp.endToEndTaskTable.keys():
-        constraints = lp.endToEndTaskTable[chain]
+    for dependency in lp.dependencyTaskTable.keys():
+        constraints = lp.dependencyTaskTable[dependency]
         for key in results.keys():
             if ("EtoE" in key):
                 if key in constraints:
-                    if ((chain in currentWorstChainTimes.keys()) == True):
-                        if(currentWorstChainTimes[chain] <  float(results[key])):
-                            currentWorstChainTimes[chain] = float(results[key])
+                    if ((dependency in currentWorstChainTimes.keys()) == True):
+                        if(currentWorstChainTimes[dependency] <  float(results[key])):
+                            currentWorstChainTimes[dependency] = float(results[key])
                     else:
-                        currentWorstChainTimes[chain] =  float(results[key])
-                                
+                        currentWorstChainTimes[dependency] =  float(results[key])
 
     constraintReductionList = []
-    for chain in lp.endToEndTaskTable.keys():  
-        constraints = lp.endToEndTaskTable[chain]
+    for dependency in lp.dependencyTaskTable.keys():  
+        constraints = lp.dependencyTaskTable[dependency]
         for c in constraints:
-            limitEndtoEndConstraint[c] = round(currentWorstChainTimes[chain])
-            if (chain == currentProcessingDependency):
+            limitEndtoEndConstraint[c] = round(currentWorstChainTimes[dependency])
+            if (dependency == currentProcessingDependency):
                 constraintReductionList.append(c)
     return limitEndtoEndConstraint, constraintReductionList
 
 def exportSchedule(system, schedule, lp, allTaskInstances, results):
-    for t in system['TaskStore']:
-        if (t['name']== "__system"):
+    for task in system['TaskStore']:
+        if (task['name'] == "__system"):
             continue
+        
         taskInstancesJson = {
-            "name" : t["name"],
-            "initialOffset" : 0,
+            "name": task['name'],
+            "value": []
         }
-        instances = allTaskInstances[t['name']]
-        instancesLS = []
-        i = 0 
-        for inst in instances: 
-            startTimeKey = lp.taskInstStartTime(inst)
-            endTimeKey = lp.taskInstEndTime(inst)
-            starttime = results[startTimeKey]
-            endtime = results[endTimeKey]
+        
+        for instance in allTaskInstances[task['name']]: 
+            index = len(taskInstancesJson['value'])
+            startTimeKey = lp.taskInstStartTime(instance)
+            endTimeKey = lp.taskInstEndTime(instance)
+
+            # FIXME: Unsafe rounding! End times could exceed original task period
+            startTime = round(float(results[startTimeKey]))
+            endTime = round(float(results[endTimeKey]))
+            period = int(task['period'])
+            wcet = int(task['wcet'])
+            
             taskInstance = {
-                            "instance" : i,
-                            "periodStartTime" : round(float((i * int(t['period'])))),
-                            "letStartTime" : round(float(starttime)),
-                            "letEndTime" : round(float(endtime)),
-                            "periodEndTime" : round(float((i + 1) * int(t['period']))),
-                            "executionTime": t['wcet'],
-                            "executionIntervals": [ {
-                                "startTime": round(float(starttime)),
-                                "endTime": round(float(starttime)+ int(t['wcet']))
-                            } ]
-                        }
-            i = i + 1
-            instancesLS.append(taskInstance)
-        taskInstancesJson["value"] = instancesLS 
-        schedule["TaskInstancesStore"].append(taskInstancesJson)
+                "instance" : index,
+                "periodStartTime" : index * period,
+                "letStartTime" : startTime,
+                "letEndTime" : endTime,
+                "periodEndTime" : (index + 1) * period,
+                "executionTime": task['wcet'],
+                "executionIntervals": [ {
+                    "startTime": startTime,
+                    "endTime": startTime + wcet
+                } ]
+            }
+            taskInstancesJson['value'].append(taskInstance)
+        schedule['TaskInstancesStore'].append(taskInstancesJson)
     return schedule
-
-
 
 # Call Gurobi and parse the result
 def CallGurobi():
@@ -391,8 +385,8 @@ def CallGurobi():
     with subprocess.Popen([Config.solverProg, "ResultFile=gurobiresult.sol", Config.lpFile], stdout=subprocess.PIPE) as proc:
         output = proc.stdout.read().decode("utf-8")
         if "Model is infeasible" in output:
-            print("LP problem is infeasible!")
-            raise Exception("LP problem is infeasible!")
+            print("LetSynchronise system is unschedulable!")
+            raise Exception("LetSynchronise system is unschedulable!")
         
         data = open("gurobiresult.sol", "r").read()
         lines = data.splitlines()
@@ -410,8 +404,8 @@ def CallLPSolve():
     with subprocess.Popen([Config.solverProg, Config.lpFile, '-ip'], stdout=subprocess.PIPE) as proc:
         output = proc.stdout.read().decode("utf-8")
         if "This problem is infeasible" in output:
-            print("LP problem is infeasible!")
-            raise Exception("LP problem is infeasible!")
+            print("LetSynchronise system is unschedulable!")
+            raise Exception("LetSynchronise system is unschedulable!")
         
         lines = output.splitlines()
         for line in lines:
@@ -420,7 +414,6 @@ def CallLPSolve():
             fragment = re.split('\s+', line)
             results[fragment[0]] = fragment[1]  # Create dictionary of variables and their solutions
     return results, lines
-
 
 
 if __name__ == '__main__':
