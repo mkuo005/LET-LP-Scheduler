@@ -1,6 +1,6 @@
 """
 This program converts a LetSyncrhonise system model into a set of linear programming 
-constraints that can be solved to find an optimal schedule.
+constraints that can be solved to minimise the delays of task dependencies.
 """
 
 # Import web server libraries
@@ -9,11 +9,11 @@ import socketserver
 
 # Import the required libraries
 import sys
+import subprocess
 import argparse
+import re
 import json
 import math
-import subprocess
-import re
 from enum import Enum
 from types import SimpleNamespace
 
@@ -23,7 +23,7 @@ from LpSolveLPWriter import LpSolveLPWriter
 # Import Gurobi constraint generator
 from GurobiLPWriter import GurobiLPWriter
 
-# Tool configurations
+# Tool configuration
 class Solver(Enum):
     NONE = 0
     GUROBI = 1
@@ -42,13 +42,14 @@ Config = SimpleNamespace(
     solveProg = "",
     os = "",
     exeSuffix = "",
-    lpFile = "system.lp"
+    lpFile = "system.lp",
+    objectiveVariable = "sumDependencyDelays"
 )
 
 # Restrict that all instances of a task have the same LET parameters
 sameLETForAllInstances = True
 
-# Web server to handle requests from LetSyncrhonise LP plugin, 
+# Web server to handle requests from the LetSyncrhonise LP plugin, 
 # ls.plugin.goal.ilp.js
 # https://github.com/uniba-swt/LetSynchronise/blob/master/sources/plugins/ls.plugin.goal.ilp.js
 class Server(BaseHTTPRequestHandler):
@@ -111,7 +112,6 @@ class Server(BaseHTTPRequestHandler):
         self.do_POST();
 
 
-
 # LP Scheduler
 def lpScheduler(system):
     
@@ -120,41 +120,38 @@ def lpScheduler(system):
         "TaskInstancesStore" : []
     }
 
-    # Store latest fesible schedule
+    # Store last feasible task schedule
     lastFeasibleSchedule = schedule.copy()
 
     # Constraints to improve end-to-end reaction time by limiting the value found 
     limitEndtoEndConstraint = {}
 
-    # Determine the hyperperiod of tasks
-    hyperperiod = 1
-    for t in system['TaskStore']:
-        hyperperiod = math.lcm(hyperperiod, t['period'])
-    print("System hyperperiod: " + str(hyperperiod))
+    # Determine the hyper-period of the tasks
+    taskPeriods = [task['period'] for task in system['TaskStore']]
+    hyperPeriod = math.lcm(*taskPeriods)
+    print(f"System hyper-period: {hyperPeriod} ns")
 
-    # The number of hyperperiod used for scheduler is to exceed the makespan as event chains can span across mutiple hyperperiods
-    factor = system['PluginParameters']['Makespan'] / hyperperiod
-    factor = math.ceil(factor)
-    hyperperiod = factor * hyperperiod 
-    print("Hyperperiod scaled by makespan: " + str(hyperperiod))
+    # The task schedule is analysed over a scheduling window, starting at 0 ns and 
+    # ending at the makespan, rounded up to the next hyper-period.
+    # Limitation: End-to-end constraints where none of their instances appears within 
+    # the scheduling window will not be optimised.
+    makespan = system['PluginParameters']['Makespan']
+    schedulingWindow = math.ceil(makespan / hyperPeriod) * hyperPeriod
+    print(f"Scheduling window: {schedulingWindow} ns")
     
-    # Very large number is the scaled hyperperiod as task parameters cannot exceed the scaled hyperperiod
-    veryLargeNumber = hyperperiod
+    # A large constant, equal to the scheduling window, is needed when normalising logical disjunctions in LP constraints.
+    lpLargeConstant = schedulingWindow
 
-
-    # Get a list of all task dependencies that does not include the environment '__system'
+    # Get all task dependencies that do not involve system inputs or outputs ("__system") 
     taskDependenciesList = []
     for dependency in system['DependencyStore']:
-        name = dependency['name']
-        srcTask = dependency['source']['task']
-        destTask = dependency['destination']['task']
-        if (srcTask == '__system' or destTask == '__system'):
+        taskDependencyPair = f"{dependency['source']['task']} --> {dependency['destination']['task']}"
+        if ("__system" in taskDependencyPair):
             continue
-        taskDependencyPair = srcTask+"_"+destTask
         taskDependenciesList.append(taskDependencyPair)
 
 
-    # Variable to track number of iterations to find solution    
+    # Track the number of iterations to find solution    
     timesRan = 0
     print()
 
@@ -163,57 +160,51 @@ def lpScheduler(system):
 
         # Keep iterating ILP solver until no further optimisations can be found
         lookingForOptimalSolution = True
+        
         # List of ILP constraint used to tighten the current dependency
         constraintReductionList = []
-        while(lookingForOptimalSolution):
+        while lookingForOptimalSolution:
             print(f"Iteration {timesRan} ... {currentProcessingDependency}")
-            timesRan = timesRan + 1
+            timesRan += 1
 
             # Create LP writer for the selected solver
             if Config.solver == Solver.GUROBI: 
-                lp = GurobiLPWriter(Config.lpFile, veryLargeNumber)
+                lp = GurobiLPWriter(Config.lpFile, Config.objectiveVariable, lpLargeConstant)
             elif Config.solver == Solver.LPSOLVE:
-                lp = LpSolveLPWriter(Config.lpFile, veryLargeNumber)
+                lp = LpSolveLPWriter(Config.lpFile, Config.objectiveVariable, lpLargeConstant)
 
-            # Create the objective to minimize End-To-End time
-            lp.writeObjective("endToEndTime")
+            # Create the objective to minimize task dependency delay
+            lp.writeObjective()
 
-            # All task instances within the hyperperiod
+            # All task instances within the scheduling window
             allTaskInstances = {}
-            taskWCET = {}
-            taskPeriod = {}
 
-            # Encode the task parameters in to LP contraints
-            # Go over each task and create contraints for each task instance
-            for t in system['TaskStore']:
-                lp.writeComment("task properties")
+            # Encode the task instances over the scheduling window as LP constraints
+            for task in system['TaskStore']:
+                # Get task parameters
+                taskName = task['name']
+                taskWcet = task['wcet']
+                taskPeriod = task['period']
                 
-                # Get current task properties
-                taskName = t['name']
-                wcet = t['wcet']
-                period = t['period']
-
-                # Store task properties in list
-                taskWCET[taskName] = wcet
-                taskPeriod[taskName] = period
+                lp.writeComment(f"Properties for task {taskName}")
                 
-                # For each instrance of the task within the hyperperiod
+                # Create the task instances that appear inside the scheduling window
                 instances = []
                 i = 0
-                for instanceStartTime in range(0, hyperperiod, period):
+                for instanceStartTime in range(0, schedulingWindow, taskPeriod):
                     # Task instances will be named by incrementing an integer index
-                    inst = taskName + "_" + str(i)
-                    instances.append(inst)
+                    instanceName = f"{taskName}_{i}"
+                    instances.append(instanceName)
 
-                    # Computer task instance properties
-                    # Computer the task instance deadline
-                    instanceDeadline = instanceStartTime + period
+                    # Compute task instance end time
+                    instanceEndTime = instanceStartTime + taskPeriod
+                    
                     # Encode the execution bounds of the task instance in LP constraints
-                    lp.writeTaskInstanceExecutionBounds(str(taskName), inst, instanceStartTime, instanceDeadline, taskWCET[taskName], sameLETForAllInstances)
+                    lp.writeTaskInstanceExecutionBounds(str(taskName), instanceName, instanceStartTime, instanceEndTime, taskWcet, sameLETForAllInstances)
 
                     # The append list of unknown integer variables with the instance start and end times
-                    lp.intVariables.append("U"+inst + "_end_time")
-                    lp.intVariables.append("U"+inst + "_start_time")
+                    lp.intVariables.append("U"+instanceName + "_end_time")
+                    lp.intVariables.append("U"+instanceName + "_start_time")
                     i = i + 1
                 
                 # Maintain a list of instances assoicated to a task
@@ -225,10 +216,9 @@ def lpScheduler(system):
             lp.writeComment("Make sure tasks do not overlap in execution")
 
             # Go over each task and make sure the task instances do not overlap in execution (single core)
-            for t in system['TaskStore']:
-                wcet = t['wcet']
-                #get all instances of that task
-                instances = copyAllTaskInstances.pop(t['name'])
+            for task in system['TaskStore']:
+                # Get all instances of that task
+                instances = copyAllTaskInstances.pop(task['name'])
                 for inst in instances:
                     for key in copyAllTaskInstances.keys():
                         for other in copyAllTaskInstances[key]:
@@ -313,7 +303,7 @@ def lpScheduler(system):
             else:
                 # Problem is feasible
                 print("Problem is feasible")
-                print(f"Current summation of end-to-end times: {results['endToEndTime']} ns")
+                print(f"Current summation of task dependency delays: {results['sumDependencyDelays']} ns")
                 
                 # Create the task schedule from the LP solution
                 limitEndtoEndConstraint, constraintReductionList = parseLPSolveResults(limitEndtoEndConstraint, currentProcessingDependency, lp, results)       

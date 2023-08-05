@@ -1,25 +1,28 @@
 class GurobiLPWriter:
-    def __init__(self, filename, veryLargeNumber):
+    def __init__(self, filename, objectiveVariable, lpLargeConstant):
         self.filename = filename
         self.file = open(filename, "w")
+        self.objectiveVariable = objectiveVariable
+        self.lpLargeConstant = lpLargeConstant
+        
+        self.endToEndTaskTable = {}
+        self.endToEndTimeSummation = ""
+        self.endToEndConstraints = ""
+        
         #list of all boolean variables used
         self.booleanVariables = []
         #list of all integer variables used
         self.intVariables = []
-        self.veryLargeNumber = veryLargeNumber
-        self.endToEndTaskTable = {}
-        self.endToEndTimeSummation = ""
-        self.endToEndConstraints = ""
 
     def write(self, string):
         self.file.write(string)
 
-    def writeObjective(self, objectiveVariable):
-        self.file.write("Minimize\n"+objectiveVariable+"\n")
+    def writeObjective(self):
+        self.file.write(f"Minimize\n{self.objectiveVariable}\n")
         self.file.write("Subject To\n")
 
     def writeObjectiveEquation(self):
-        self.file.write("endToEndTime "+self.endToEndTimeSummation+" = 0;\n")
+        self.file.write(f"{self.objectiveVariable} {self.endToEndTimeSummation} = 0;\n")
 
     def writeComment(self, string):
         None
@@ -52,8 +55,8 @@ class GurobiLPWriter:
         #These two constraints ensure the tasks either execute before OR after one another and not overlap
         #inst_end_time - other_start_time <= XXXXX * control
         #other_end_time - inst_start_time <= XXXXX - XXXXX * control
-        self.file.write(self.taskInstEndTime(currentTaskInst)+ " - " + self.taskInstStartTime(otherTaskInst)   + " - " + str(self.veryLargeNumber) + " " + controlVariable + " <= 0" + "\n")
-        self.file.write(self.taskInstEndTime(otherTaskInst)  + " - " + self.taskInstStartTime(currentTaskInst) + " + " + str(self.veryLargeNumber) + " " + controlVariable + " <= "+str(self.veryLargeNumber)  + "\n")
+        self.file.write(self.taskInstEndTime(currentTaskInst)+ " - " + self.taskInstStartTime(otherTaskInst)   + " - " + str(self.lpLargeConstant) + " " + controlVariable + " <= 0" + "\n")
+        self.file.write(self.taskInstEndTime(otherTaskInst)  + " - " + self.taskInstStartTime(currentTaskInst) + " + " + str(self.lpLargeConstant) + " " + controlVariable + " <= "+str(self.lpLargeConstant)  + "\n")
 
     def writeTaskDependencyContraint(self, srcTask, destTask, destTaskInstances, srcTaskInstances):
         for destInst in destTaskInstances:
@@ -76,15 +79,15 @@ class GurobiLPWriter:
                                 
                 #instance connection is only vaild if the source task finsihes before the destination task start time or else it must be zero
                 #The constaint should be 1 when the start_time is larger than the end_time therefore a -ve value or 0
-                self.file.write(self.taskInstEndTime(srcInst) + " - " + self.taskInstStartTime(destInst) + " + " +str(self.veryLargeNumber) +" "+ instanceConnectionControl + " <= " + str(self.veryLargeNumber) + "\n")
+                self.file.write(self.taskInstEndTime(srcInst) + " - " + self.taskInstStartTime(destInst) + " + " +str(self.lpLargeConstant) +" "+ instanceConnectionControl + " <= " + str(self.lpLargeConstant) + "\n")
                 
                 #append this dependency end-to-end time to total end-to-end time of the system
                 self.endToEndTimeSummation += " - "
 
                 self.endToEndConstraints += "EtoE_"+ endToEndConstraintID + " >= 0\n"
                 X = self.taskInstEndTime(destInst) + " - " + self.taskInstStartTime(srcInst)
-                self.endToEndConstraints += X +" + "+str(self.veryLargeNumber)+" " +instanceConnectionControl + " - " + "EtoE_"+ endToEndConstraintID + " <= " + str(self.veryLargeNumber)  +"\n"
-                self.endToEndConstraints += X +" - "+str(self.veryLargeNumber)+" " +instanceConnectionControl + " - " + "EtoE_"+ endToEndConstraintID + " >= " +" -"+str(self.veryLargeNumber) +"\n"
+                self.endToEndConstraints += X +" + "+str(self.lpLargeConstant)+" " +instanceConnectionControl + " - " + "EtoE_"+ endToEndConstraintID + " <= " + str(self.lpLargeConstant)  +"\n"
+                self.endToEndConstraints += X +" - "+str(self.lpLargeConstant)+" " +instanceConnectionControl + " - " + "EtoE_"+ endToEndConstraintID + " >= " +" -"+str(self.lpLargeConstant) +"\n"
                                 
                 #a simple sum of the difference will be optimising the average - need to think...
                 self.endToEndTimeSummation += "EtoE_"+ endToEndConstraintID
