@@ -43,11 +43,9 @@ Config = SimpleNamespace(
     os = "",
     exeSuffix = "",
     lpFile = "system.lp",
-    objectiveVariable = "sumDependencyDelays"
+    objectiveVariable = "sumDependencyDelays",
+    individualLetInstanceParams = True  # Each instance of a LET task can have different parameters
 )
-
-# Restrict that all instances of a task have the same LET parameters
-sameLETForAllInstances = False
 
 # Web server to handle requests from the LetSyncrhonise LP plugin, 
 # ls.plugin.goal.ilp.js
@@ -114,6 +112,7 @@ class Server(BaseHTTPRequestHandler):
         self.do_POST();
 
 
+# FIXME: Refactor to generate LP information and then generate LP file in one go. 
 # LP Scheduler
 def lpScheduler(system):
     
@@ -152,7 +151,7 @@ def lpScheduler(system):
     timesRan = 0
 
     # Iterate through each dependency and try to tighten the worst case end-to-end time
-    for currentProcessingDependency in taskDependenciesList:
+    for taskDependencyPair in taskDependenciesList:
 
         # Keep iterating ILP solver until no further optimisations can be found
         lookingForOptimalSolution = True
@@ -161,7 +160,7 @@ def lpScheduler(system):
         constraintReductionList = []
         while lookingForOptimalSolution:
             print()
-            print(f"Iteration {timesRan} ... {currentProcessingDependency}")
+            print(f"Iteration {timesRan} ... {taskDependencyPair}")
             timesRan += 1
 
             # Create LP writer for the selected solver
@@ -196,7 +195,7 @@ def lpScheduler(system):
                     instanceEndTime = instanceStartTime + taskPeriod
                     
                     # Encode the execution bounds of the task instance in LP constraints
-                    lp.writeTaskInstanceExecutionBounds(taskName, instanceName, instanceStartTime, instanceEndTime, taskWcet, sameLETForAllInstances)
+                    lp.writeTaskInstanceExecutionBounds(taskName, instanceName, instanceStartTime, instanceEndTime, taskWcet, Config.individualLetInstanceParams)
                 
                 allTaskInstances[taskName] = instances
             
@@ -214,7 +213,7 @@ def lpScheduler(system):
             
             lp.writeComment("Each destination task instance of a dependency can only be connected to one source")
 
-            # Iterate over each dependency
+            # Constrain each event dependency task instance to only have one source task instance
             for dependency in system['DependencyStore']:
 
                 # Dependency parameters
@@ -226,19 +225,20 @@ def lpScheduler(system):
                 if (srcTask == '__system' or destTask == '__system'):
                     continue
 
-                # Get the instances of all source and destination tasks
+                # Get source and destination task instances
                 srcTaskInstances = allTaskInstances[srcTask]
                 destTaskInstances = allTaskInstances[destTask]
 
-                lp.writeComment(f"Dependency {name}")
-
-                # Create constraint that each event dependency task instance can only have 1 source task instance
-                # Iterate over destination task instances
-                lp.writeTaskDependencyConstraint(srcTask, destTask, destTaskInstances, srcTaskInstances)
-
-            lp.write(lp.dependencyConstraints)
+                lp.writeDependencySourceTaskSelectionConstraint(name, srcTask, srcTaskInstances, destTask, destTaskInstances)
+            
+            # FIXME: Refactor this into the loop above
+            lp.writeComment("Dependency delays")
+            lp.write(lp.dependencyDelayConstraints)
+            
             lp.writeObjectiveEquation()
 
+            # FIXME: Refactor into LP writers
+            lp.writeComment("Tighten dependency delays")
             for key in limitEndtoEndConstraint:
                 # The constraintReductionList contains dependency instances pairs of the currently processing dependency to improve the end-to-end time
                 # Tighten the constraint for this dependency to see if there are tighter better solutions
@@ -258,15 +258,15 @@ def lpScheduler(system):
 
             lp.close()
 
-            # call solvers
+            # Call the LP solver
             if Config.solver == Solver.GUROBI:
                 results, lines = CallGurobi()
             elif Config.solver == Solver.LPSOLVE:
                 results, lines = CallLPSolve()
+            
             print()
             print("Results:")
             print("--------")
-            
             if len(results) == 0 :
                 # If there are no results then the problem is infeasible
                 print("LetSynchronise system is unschedulable!")
@@ -280,23 +280,23 @@ def lpScheduler(system):
                 print(f"Current summation of task dependency delays: {results['sumDependencyDelays']} ns")
                 
                 # Create the task schedule from the LP solution
-                limitEndtoEndConstraint, constraintReductionList = parseLPSolveResults(limitEndtoEndConstraint, currentProcessingDependency, lp, results)       
+                limitEndtoEndConstraint, constraintReductionList = parseLPSolveResults(limitEndtoEndConstraint, taskDependencyPair, lp, results)       
                 
                 # Export the best task schedule
                 lastFeasibleSchedule = exportSchedule(system, lp, allTaskInstances, results)
-                print("--------")
+            print("--------")
                 
             # If all instances have the same offset there is no point to iterate for a solution as all solutions are the same as any solution is as good as another
-            if sameLETForAllInstances:
+            if not Config.individualLetInstanceParams:
                 lookingForOptimalSolution = False
 
-        if sameLETForAllInstances:
+        if not Config.individualLetInstanceParams:
             break
             
     print(f"Iterated a total of {timesRan} times")
     return lastFeasibleSchedule
 
-def parseLPSolveResults(limitEndtoEndConstraint, currentProcessingDependency, lp, results):
+def parseLPSolveResults(limitEndtoEndConstraint, taskDependencyPair, lp, results):
     currentWorstChainTimes = {}
 
     # Get worst-case delays for each task dependency
@@ -316,7 +316,7 @@ def parseLPSolveResults(limitEndtoEndConstraint, currentProcessingDependency, lp
         constraints = lp.dependencyTaskTable[dependency]
         for c in constraints:
             limitEndtoEndConstraint[c] = round(currentWorstChainTimes[dependency])
-            if (dependency == currentProcessingDependency):
+            if (dependency == taskDependencyPair):
                 constraintReductionList.append(c)
     return limitEndtoEndConstraint, constraintReductionList
 

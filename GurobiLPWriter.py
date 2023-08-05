@@ -7,7 +7,7 @@ class GurobiLPWriter:
         
         self.dependencyTaskTable = {}
         self.dependencyDelaysSum = ""
-        self.dependencyConstraints = ""
+        self.dependencyDelayConstraints = ""
         
         #list of all boolean variables used
         self.booleanVariables = []
@@ -22,6 +22,7 @@ class GurobiLPWriter:
         self.write("Subject To\n")
 
     def writeObjectiveEquation(self):
+        self.writeComment("Objective equation")
         self.write(f"{self.objectiveVariable} {self.dependencyDelaysSum} = 0;\n")
 
     def writeComment(self, string):
@@ -34,7 +35,7 @@ class GurobiLPWriter:
         return f"U{taskInstance}_end_time"
 
     # FIXME: Tailor constraints based on whether each task instance can have its own task parameters
-    def writeTaskInstanceExecutionBounds(self, taskName, taskInstance, instanceStartTime, instanceEndTime, wcet, sameLETForAllInstances):
+    def writeTaskInstanceExecutionBounds(self, taskName, taskInstance, instanceStartTime, instanceEndTime, wcet, individualLetInstanceParams):
         # Add to list of unknown integer variables with the instance start and end times
         self.intVariables.append(self.taskInstStartTime(taskInstance))
         self.intVariables.append(self.taskInstEndTime(taskInstance))
@@ -48,7 +49,7 @@ class GurobiLPWriter:
         # Task execution time has to be greater than or equal to wcet
         sel.write(f"{self.taskInstEndTime(taskInstance)} - {self.taskInstStartTime(taskInstance)} >= {wcet};\n")
 
-        if (sameLETForAllInstances):
+        if not individualLetInstanceParams:
             #Make sure all LET instances start and end at the same time
             self.write(self.taskInstStartTime(taskInstance) + " - "+ self.taskInstStartTime(taskName) + " = " + str(instanceStartTime) + ";\n")
             self.write(self.taskInstEndTime(taskInstance) + " - "+ self.taskInstEndTime(taskName) + " = " + str(instanceStartTime) + ";\n")
@@ -63,7 +64,12 @@ class GurobiLPWriter:
         self.write(self.taskInstEndTime(currentTaskInst)+ " - " + self.taskInstStartTime(otherTaskInst)   + " - " + str(self.lpLargeConstant) + " " + controlVariable + " <= 0" + "\n")
         self.write(self.taskInstEndTime(otherTaskInst)  + " - " + self.taskInstStartTime(currentTaskInst) + " + " + str(self.lpLargeConstant) + " " + controlVariable + " <= "+str(self.lpLargeConstant)  + "\n")
 
-    def writeTaskDependencyConstraint(self, srcTask, destTask, destTaskInstances, srcTaskInstances):
+    def writeDependencySourceTaskSelectionConstraint(self, name, srcTask, srcTaskInstances, destTask, destTaskInstances):
+        self.writeComment(f"Dependency {name}")
+
+        taskDependencyPair = srcTask+"_"+destTask
+        self.dependencyTaskTable[taskDependencyPair] = []
+
         for destInst in destTaskInstances:
             srcInstString = ""
             first = True
@@ -89,27 +95,28 @@ class GurobiLPWriter:
                 #append this dependency end-to-end time to total end-to-end time of the system
                 self.dependencyDelaysSum += " - "
 
-                self.dependencyConstraints += "EtoE_"+ endToEndConstraintID + " >= 0\n"
+                self.dependencyDelayConstraints += "EtoE_"+ endToEndConstraintID + " >= 0\n"
                 X = self.taskInstEndTime(destInst) + " - " + self.taskInstStartTime(srcInst)
-                self.dependencyConstraints += X +" + "+str(self.lpLargeConstant)+" " +instanceConnectionControl + " - " + "EtoE_"+ endToEndConstraintID + " <= " + str(self.lpLargeConstant)  +"\n"
-                self.dependencyConstraints += X +" - "+str(self.lpLargeConstant)+" " +instanceConnectionControl + " - " + "EtoE_"+ endToEndConstraintID + " >= " +" -"+str(self.lpLargeConstant) +"\n"
+                self.dependencyDelayConstraints += X +" + "+str(self.lpLargeConstant)+" " +instanceConnectionControl + " - " + "EtoE_"+ endToEndConstraintID + " <= " + str(self.lpLargeConstant)  +"\n"
+                self.dependencyDelayConstraints += X +" - "+str(self.lpLargeConstant)+" " +instanceConnectionControl + " - " + "EtoE_"+ endToEndConstraintID + " >= " +" -"+str(self.lpLargeConstant) +"\n"
                                 
                 #a simple sum of the difference will be optimising the average - need to think...
                 self.dependencyDelaysSum += "EtoE_"+ endToEndConstraintID
-                taskDependencyPair = srcTask+"_"+destTask
                 self.dependencyTaskTable[taskDependencyPair].append("EtoE_"+ endToEndConstraintID)     
                                 
             #There can only be one source
             self.write(srcInstString+" = 1\n")
 
     def writeBooleanConstraints(self):
-        sel.write("Bounds\n")
+        self.writeComment("Boolean variables")
+        self.write("Bounds\n")
         binaries = ""
         for b in self.booleanVariables:
             binaries = binaries + b + " "
         self.write("binary "+ binaries+"\n")
         
     def writeIntegerConstraints(self):
+        self.writeComment("Integer variables")
         pass
 
     def close(self):
