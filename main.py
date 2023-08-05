@@ -98,6 +98,8 @@ class Server(BaseHTTPRequestHandler):
         
         try:
             schedule = lpScheduler(system)
+            if schedule == None:
+                raise Exception("LetSynchronise system is unschedulable!")
         except FileNotFoundError as error:
             self._set_error_headers(error)
             return
@@ -115,13 +117,8 @@ class Server(BaseHTTPRequestHandler):
 # LP Scheduler
 def lpScheduler(system):
     
-    # Initial empty schedule
-    schedule = {
-        "TaskInstancesStore" : []
-    }
-
     # Store last feasible task schedule
-    lastFeasibleSchedule = schedule.copy()
+    lastFeasibleSchedule = None
 
     # Constraints to improve end-to-end reaction time by limiting the value found 
     limitEndtoEndConstraint = {}
@@ -153,7 +150,6 @@ def lpScheduler(system):
 
     # Track the number of iterations to find solution    
     timesRan = 0
-    print()
 
     # Iterate through each dependency and try to tighten the worst case end-to-end time
     for currentProcessingDependency in taskDependenciesList:
@@ -164,6 +160,7 @@ def lpScheduler(system):
         # List of ILP constraint used to tighten the current dependency
         constraintReductionList = []
         while lookingForOptimalSolution:
+            print()
             print(f"Iteration {timesRan} ... {currentProcessingDependency}")
             timesRan += 1
 
@@ -271,11 +268,6 @@ def lpScheduler(system):
             # Create boolean variable constraint
             lp.writeBooleanConstraints()
 
-            # Commented out so that unknown variables are left as real numbers rather then integers.
-            # No need to restrict problem to ILP state space as it will cause unnesscessary complexity
-            #for i in intVariables:
-            #    lp.write("int "+ i + ";\n")
-
             lp.close()
 
             # call solvers
@@ -288,23 +280,22 @@ def lpScheduler(system):
             print("--------")
             
             if len(results) == 0 :
-                # If there are no results then the problem must be infeasible
-                print("Problem is infeasible")
+                # If there are no results then the problem is infeasible
+                print("LetSynchronise system is unschedulable!")
                 
                 # No need to try and tighten an infeasible problem
                 lookingForOptimalSolution = False
                 limitEndtoEndConstraint = {}
             else:
                 # Problem is feasible
-                print("Problem is feasible")
+                print("LetSynchronise system is schedulable")
                 print(f"Current summation of task dependency delays: {results['sumDependencyDelays']} ns")
                 
                 # Create the task schedule from the LP solution
                 limitEndtoEndConstraint, constraintReductionList = parseLPSolveResults(limitEndtoEndConstraint, currentProcessingDependency, lp, results)       
                 
                 # Export the best task schedule
-                schedule = exportSchedule(system, schedule, lp, allTaskInstances, results)
-                lastFeasibleSchedule = schedule.copy()
+                lastFeasibleSchedule = exportSchedule(system, lp, allTaskInstances, results)
                 print("--------")
                 
             # If all instances have the same offset there is no point to iterate for a solution as all solutions are the same as any solution is as good as another
@@ -341,7 +332,11 @@ def parseLPSolveResults(limitEndtoEndConstraint, currentProcessingDependency, lp
                 constraintReductionList.append(c)
     return limitEndtoEndConstraint, constraintReductionList
 
-def exportSchedule(system, schedule, lp, allTaskInstances, results):
+def exportSchedule(system, lp, allTaskInstances, results):
+    schedule = {
+        "TaskInstancesStore" : []
+    }
+    
     for task in system['TaskStore']:
         if (task['name'] == "__system"):
             continue
@@ -384,17 +379,12 @@ def CallGurobi():
     lines = []
     with subprocess.Popen([Config.solverProg, "ResultFile=gurobiresult.sol", Config.lpFile], stdout=subprocess.PIPE) as proc:
         output = proc.stdout.read().decode("utf-8")
-        if "Model is infeasible" in output:
-            print("LetSynchronise system is unschedulable!")
-            raise Exception("LetSynchronise system is unschedulable!")
-        
-        data = open("gurobiresult.sol", "r").read()
-        lines = data.splitlines()
-        for line in lines:
-            if (len(line) == 0):
-                continue
-            fragment = re.split('\s+', line)
-            results[fragment[0]] = fragment[1] # Create dictionary of variables and their solutions
+        if not "Model is infeasible" in output:
+            data = open("gurobiresult.sol", "r").read()
+            lines = filter(lambda line: len(line) != 0, data.splitlines())
+            for line in lines:
+                fragment = re.split('\s+', line)
+                results[fragment[0]] = fragment[1] # Create dictionary of variables and their solutions
     return results, lines
 
 # Call LpSolve and parse the result
@@ -403,16 +393,11 @@ def CallLPSolve():
     lines = []
     with subprocess.Popen([Config.solverProg, Config.lpFile, '-ip'], stdout=subprocess.PIPE) as proc:
         output = proc.stdout.read().decode("utf-8")
-        if "This problem is infeasible" in output:
-            print("LetSynchronise system is unschedulable!")
-            raise Exception("LetSynchronise system is unschedulable!")
-        
-        lines = output.splitlines()
-        for line in lines:
-            if (len(line) == 0):
-                continue
-            fragment = re.split('\s+', line)
-            results[fragment[0]] = fragment[1]  # Create dictionary of variables and their solutions
+        if not "This problem is infeasible" in output:
+            lines = filter(lambda line: len(line) != 0, output.splitlines())
+            for line in lines:
+                fragment = re.split('\s+', line)
+                results[fragment[0]] = fragment[1]  # Create dictionary of variables and their solutions
     return results, lines
 
 

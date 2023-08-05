@@ -17,13 +17,13 @@ class LpSolveLPWriter:
         self.file.write(string)
 
     def writeObjective(self):
-        self.file.write(f"min: {self.objectiveVariable};\n")
+        self.write(f"min: {self.objectiveVariable};\n")
 
     def writeObjectiveEquation(self):
-        self.file.write(f"{self.objectiveVariable} = {self.dependencyDelaysSum};\n")
+        self.write(f"{self.objectiveVariable} = {self.dependencyDelaysSum};\n")
 
     def writeComment(self, string):
-        self.file.write(f"\n/* {string} */\n")
+        self.write(f"\n/* {string} */\n")
 
     def taskInstStartTime(self, taskInstance):
         return f"U{taskInstance}_start_time"
@@ -38,18 +38,18 @@ class LpSolveLPWriter:
         self.intVariables.append(self.taskInstEndTime(taskInstance))
         
         # Task execution has to start at or after the period
-        self.file.write(f"{self.taskInstStartTime(taskInstance)} >= {instanceStartTime};\n")
+        self.write(f"{self.taskInstStartTime(taskInstance)} >= {instanceStartTime};\n")
         
         # Task execution has to end at or before the period
-        self.file.write(f"{self.taskInstEndTime(taskInstance)} <= {instanceEndTime};\n")
+        self.write(f"{self.taskInstEndTime(taskInstance)} <= {instanceEndTime};\n")
 
         # Task execution time has to be greater than or equal to wcet
-        self.file.write(f"{self.taskInstEndTime(taskInstance)} - {self.taskInstStartTime(taskInstance)} >= {wcet};\n")
+        self.write(f"{self.taskInstEndTime(taskInstance)} - {self.taskInstStartTime(taskInstance)} >= {wcet};\n")
         
         if sameLETForAllInstances:
             # Make sure all LET instances start and end at the same time
-            self.file.write(f"{self.taskInstStartTime(taskName)} = {self.taskInstStartTime(taskInstance)} - {instanceStartTime};\n")
-            self.file.write(f"{self.taskInstEndTime(taskName)} = {self.taskInstEndTime(taskInstance)} - {instanceStartTime};\n")
+            self.write(f"{self.taskInstStartTime(taskName)} = {self.taskInstStartTime(taskInstance)} - {instanceStartTime};\n")
+            self.write(f"{self.taskInstEndTime(taskName)} = {self.taskInstEndTime(taskInstance)} - {instanceStartTime};\n")
 
     def writeTaskOverlapConstraint(self, currentTaskInst, otherTaskInst):
         controlVariable = "control"+currentTaskInst+"_"+otherTaskInst
@@ -58,8 +58,8 @@ class LpSolveLPWriter:
         #These two constraints ensure the tasks either execute before OR after one another and not overlap
         #inst_end_time - other_start_time <= XXXXX * control
         #other_end_time - inst_start_time <= XXXXX - XXXXX * control
-        self.file.write(self.taskInstEndTime(currentTaskInst)+ " - " + self.taskInstStartTime(otherTaskInst) +" <= "+str(self.lpLargeConstant) + " " + controlVariable + ";\n")
-        self.file.write(self.taskInstEndTime(otherTaskInst)+" - " + self.taskInstStartTime(currentTaskInst) +" <= "+str(self.lpLargeConstant) + " - " + str(self.lpLargeConstant ) + " " + controlVariable + ";\n")
+        self.write(self.taskInstEndTime(currentTaskInst)+ " - " + self.taskInstStartTime(otherTaskInst) +" <= "+str(self.lpLargeConstant) + " " + controlVariable + ";\n")
+        self.write(self.taskInstEndTime(otherTaskInst)+" - " + self.taskInstStartTime(currentTaskInst) +" <= "+str(self.lpLargeConstant) + " - " + str(self.lpLargeConstant ) + " " + controlVariable + ";\n")
 
     def writeTaskDependencyConstraint(self, srcTask, destTask, destTaskInstances, srcTaskInstances):
         for destInst in destTaskInstances:
@@ -82,7 +82,7 @@ class LpSolveLPWriter:
                                 
                 #instance connection is only vaild if the source task finsihes before the destination task start time or else it must be zero
                 #The constaint should be 1 when the start_time is larger than the end_time therefore a -ve value or 0
-                self.file.write(self.taskInstEndTime(srcInst) + " - " + self.taskInstStartTime(destInst) + " <= " + str(self.lpLargeConstant) + " - " +str(self.lpLargeConstant) +" "+ instanceConnectionControl +";\n")
+                self.write(self.taskInstEndTime(srcInst) + " - " + self.taskInstStartTime(destInst) + " <= " + str(self.lpLargeConstant) + " - " +str(self.lpLargeConstant) +" "+ instanceConnectionControl +";\n")
                 
                 #append this dependency end-to-end time to total end-to-end time of the system
                 if (len(self.dependencyDelaysSum) > 0):
@@ -99,12 +99,15 @@ class LpSolveLPWriter:
                 self.dependencyTaskTable[taskDependencyPair].append("EtoE_"+ endToEndConstraintID)     
                                 
             #There can only be one source
-            self.file.write(srcInstString+" = 1;\n")
+            self.write(srcInstString+" = 1;\n")
 
     def writeBooleanConstraints(self):
-        for b in self.booleanVariables:
-            self.file.write("bin "+ b + ";\n")
-        
+        for bool in self.booleanVariables:
+            self.write("bin "+ bool + ";\n")
+
+    def writeIntegerConstraints(self):
+        for int in self.intVariables:
+            self.write("int "+ int + ";\n")
 
     def close(self):
         self.file.close()
