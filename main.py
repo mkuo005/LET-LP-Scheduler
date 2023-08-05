@@ -47,7 +47,7 @@ Config = SimpleNamespace(
 )
 
 # Restrict that all instances of a task have the same LET parameters
-sameLETForAllInstances = True
+sameLETForAllInstances = False
 
 # Web server to handle requests from the LetSyncrhonise LP plugin, 
 # ls.plugin.goal.ilp.js
@@ -320,7 +320,7 @@ def lpScheduler(system):
 def parseLPSolveResults(limitEndtoEndConstraint, currentProcessingDependency, lp, results):
     currentWorstChainTimes = {}
 
-    # Get current worst case end-to-end times for each task pair dependency
+    # Get worst-case delays for each task dependency
     for dependency in lp.dependencyTaskTable.keys():
         constraints = lp.dependencyTaskTable[dependency]
         for key in results.keys():
