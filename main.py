@@ -188,7 +188,7 @@ def lpScheduler(system):
                 # Create the task instances that appear inside the scheduling window
                 instances = []
                 for instanceStartTime in range(0, schedulingWindow, taskPeriod):
-                    # Task instances will be named by incrementing an integer index
+                    # Task instance name includes an instance number
                     instanceName = f"{taskName}_{len(instances)}"
                     instances.append(instanceName)
 
@@ -198,29 +198,21 @@ def lpScheduler(system):
                     # Encode the execution bounds of the task instance in LP constraints
                     lp.writeTaskInstanceExecutionBounds(taskName, instanceName, instanceStartTime, instanceEndTime, taskWcet, sameLETForAllInstances)
                 
-                # Maintain a list of instances for each task
                 allTaskInstances[taskName] = instances
             
-            # create a copy of all task instances for manipulation
-            copyAllTaskInstances = allTaskInstances.copy()
-
             lp.writeComment("Make sure task executions do not overlap")
 
-            # Go over each task and make sure the task instances do not overlap in execution (single core)
-            for task in system['TaskStore']:
+            # Add pairwise task constraints to make sure task executions do not overlap (single core)
+            allTaskInstancesCopy = allTaskInstances.copy()
+            while bool(allTaskInstancesCopy):
                 # Get all instances of that task
-                instances = copyAllTaskInstances.pop(task['name'])
+                taskName, instances = allTaskInstancesCopy.popitem()
                 for instance in instances:
-                    for key in copyAllTaskInstances.keys():
-                        for other in copyAllTaskInstances[key]:
+                    for key in allTaskInstancesCopy.keys():
+                        for other in allTaskInstancesCopy[key]:
                             lp.writeTaskOverlapConstraint(instance, other)
-                            
-                            
-            lp.dependencyDelaysSum = ""
-            lp.writeComment("Each destination task instance of a dependency can only be connected to one source")
             
-            lp.dependencyConstraints = ""
-            lp.dependencyTaskTable = {}
+            lp.writeComment("Each destination task instance of a dependency can only be connected to one source")
 
             # Iterate over each dependency
             for dependency in system['DependencyStore']:
@@ -238,11 +230,7 @@ def lpScheduler(system):
                 srcTaskInstances = allTaskInstances[srcTask]
                 destTaskInstances = allTaskInstances[destTask]
 
-
-                lp.writeComment(name)
-                taskDependencyPair = srcTask+"_"+destTask
-
-                lp.dependencyTaskTable[taskDependencyPair] = []
+                lp.writeComment(f"Dependency {name}")
 
                 # Create constraint that each event dependency task instance can only have 1 source task instance
                 # Iterate over destination task instances

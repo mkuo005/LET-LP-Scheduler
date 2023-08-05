@@ -62,6 +62,9 @@ class LpSolveLPWriter:
         self.write(self.taskInstEndTime(otherTaskInst)+" - " + self.taskInstStartTime(currentTaskInst) +" <= "+str(self.lpLargeConstant) + " - " + str(self.lpLargeConstant ) + " " + controlVariable + ";\n")
 
     def writeTaskDependencyConstraint(self, srcTask, destTask, destTaskInstances, srcTaskInstances):
+        taskDependencyPair = srcTask+"_"+destTask
+        self.dependencyTaskTable[taskDependencyPair] = []
+        
         for destInst in destTaskInstances:
             srcInstString = ""
             first = True
@@ -95,7 +98,6 @@ class LpSolveLPWriter:
                                 
                 #a simple sum of the difference will be optimising the average - need to think...
                 self.dependencyDelaysSum += "EtoE_"+ endToEndConstraintID
-                taskDependencyPair = srcTask+"_"+destTask
                 self.dependencyTaskTable[taskDependencyPair].append("EtoE_"+ endToEndConstraintID)     
                                 
             #There can only be one source
