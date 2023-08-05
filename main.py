@@ -145,7 +145,7 @@ def lpScheduler(system):
     # Get all task dependencies that do not involve system inputs or outputs ("__system") 
     taskDependenciesList = []
     for dependency in system['DependencyStore']:
-        taskDependencyPair = f"{dependency['source']['task']} --> {dependency['destination']['task']}"
+        taskDependencyPair = f"{dependency['source']['task']}_{dependency['destination']['task']}"
         if ("__system" in taskDependencyPair):
             continue
         taskDependenciesList.append(taskDependencyPair)
