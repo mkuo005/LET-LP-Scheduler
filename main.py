@@ -135,12 +135,12 @@ def lpScheduler(system):
     lpLargeConstant = schedulingWindow
 
     # Get all task dependencies that do not involve system inputs or outputs ("__system") 
-    taskDependenciesList = []
+    taskDependenciesList = set()
     for dependency in system['DependencyStore']:
         taskDependencyPair = f"{dependency['source']['task']}_{dependency['destination']['task']}"
         if ("__system" in taskDependencyPair):
             continue
-        taskDependenciesList.append(taskDependencyPair)
+        taskDependenciesList.add(taskDependencyPair)
 
     # Store last feasible task schedule
     lastFeasibleSchedule = None
@@ -220,22 +220,17 @@ def lpScheduler(system):
                 name = dependency['name']
                 srcTask = dependency['source']['task']
                 destTask = dependency['destination']['task']
+                dependencyPair = f"{dependency['source']['task']}_{dependency['destination']['task']}"
 
                 # Dependencies to the environment are left unconstrained.
-                if (srcTask == '__system' or destTask == '__system'):
+                if "__system" in dependencyPair:
                     continue
 
                 # Get source and destination task instances
                 srcTaskInstances = allTaskInstances[srcTask]
                 destTaskInstances = allTaskInstances[destTask]
 
-                lp.writeDependencySourceTaskSelectionConstraint(name, srcTask, srcTaskInstances, destTask, destTaskInstances)
-            
-            # FIXME: Refactor this into the for-loop above
-            lp.writeComment("Dependency delays")
-            lp.write(lp.dependencyDelayConstraints)
-            
-            lp.writeObjectiveEquation()
+                lp.writeDependencySourceTaskSelectionConstraint(name, dependencyPair, srcTaskInstances, destTaskInstances)
 
             # FIXME: Refactor into LP writers
             lp.writeComment("Tighten dependency delays")
@@ -249,6 +244,9 @@ def lpScheduler(system):
                     lp.write(f"{constraint}\n")
                 elif Config.solver == Solver.LPSOLVE:
                     lp.write(f"{constraint};\n")
+            
+            # Create objective equation
+            lp.writeObjectiveEquation()
 
             # Create boolean variable constraint
             lp.writeBooleanConstraints()
@@ -280,7 +278,7 @@ def lpScheduler(system):
                 lastFeasibleSchedule = exportSchedule(system, lp, allTaskInstances, results)
 
                 # Determine upper bounds needed to tighten the dependency delays in the next iteration 
-                delayVariablesToTighten = lp.dependencyTaskTable[taskDependencyPair]
+                delayVariablesToTighten = lp.dependencyInstanceDelayVariables[taskDependencyPair]
                 delayVariableUpperBounds = parseLpResults(lp, results)       
             print("--------")
                 
@@ -295,11 +293,11 @@ def lpScheduler(system):
     return lastFeasibleSchedule
 
 def parseLpResults(lp, results):
-    delayResults = {solutionVariable: solutionValue for solutionVariable, solutionValue in results.items() if "EtoE_" in solutionVariable}
+    delayResults = {solutionVariable: solutionValue for solutionVariable, solutionValue in results.items() if "DELAY_" in solutionVariable}
     
     # Get the max delay of each task dependency instance
     maxDependencyDelays = {}
-    for dependency, delayVariables in lp.dependencyTaskTable.items():
+    for dependency, delayVariables in lp.dependencyInstanceDelayVariables.items():
         maxDependencyDelays[dependency] = -1
         for solutionVariable, solutionValue in delayResults.items():
             if solutionVariable in delayVariables:
@@ -307,7 +305,7 @@ def parseLpResults(lp, results):
     
     # Get new upper bounds for each task dependency instance
     delayVariableUpperBounds = {}
-    for dependency, delayVariables in lp.dependencyTaskTable.items():        
+    for dependency, delayVariables in lp.dependencyInstanceDelayVariables.items():        
         for delayVariable in delayVariables:
             delayVariableUpperBounds[delayVariable] = round(maxDependencyDelays[dependency])
     
