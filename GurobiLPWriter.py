@@ -46,7 +46,7 @@ class GurobiLPWriter:
         self.write(f"{self.taskInstEndTime(taskInstance)} <= {instanceEndTime};\n")
 
         # Task execution time has to be greater than or equal to wcet
-        sel.write(f"{self.taskInstEndTime(taskInstance)} - {self.taskInstStartTime(taskInstance)} >= {wcet};\n")
+        self.write(f"{self.taskInstEndTime(taskInstance)} - {self.taskInstStartTime(taskInstance)} >= {wcet};\n")
 
         if not individualLetInstanceParams:
             #Make sure all LET instances start and end at the same time
