@@ -53,7 +53,7 @@ class LpSolveLPWriter:
             self.write(f"{self.taskInstEndTime(taskName)} = {self.taskInstEndTime(taskInstance)} - {instanceStartTime};\n")
 
     def writeTaskOverlapConstraint(self, currentTaskInst, otherTaskInst):
-        controlVariable = "control"+currentTaskInst+"_"+otherTaskInst
+        controlVariable = f"control_{currentTaskInst}_{otherTaskInst}"
         self.booleanVariables.append(controlVariable)
 
         #These two constraints ensure the tasks either execute before OR after one another and not overlap
@@ -90,7 +90,7 @@ class LpSolveLPWriter:
                 #The constraint should be 1 when the start_time is larger than the end_time therefore a -ve value or 0
                 self.write(self.taskInstEndTime(srcInst) + " - " + self.taskInstStartTime(destInst) + " <= " + str(self.lpLargeConstant) + " - " +str(self.lpLargeConstant) +" "+ instanceConnectionControl +";\n")
                 
-                #append this dependency end-to-end time to total end-to-end time of the system
+                # Add this task dependency delay to the sum of all dependency delays
                 if (len(self.dependencyDelaysSum) > 0):
                     self.dependencyDelaysSum += " + "
 
@@ -103,7 +103,7 @@ class LpSolveLPWriter:
                 self.dependencyDelaysSum += "EtoE_"+ endToEndConstraintID
                 self.dependencyTaskTable[taskDependencyPair].append("EtoE_"+ endToEndConstraintID)     
                                 
-            #There can only be one source
+            # There can only be one source task
             self.write(srcInstString+" = 1;\n")
 
     def writeBooleanConstraints(self):

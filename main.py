@@ -120,13 +120,6 @@ class Server(BaseHTTPRequestHandler):
 # FIXME: Refactor to generate LP information and then generate LP file in one go. 
 # LP Scheduler
 def lpScheduler(system):
-    
-    # Store last feasible task schedule
-    lastFeasibleSchedule = None
-
-    # Constraints to improve end-to-end reaction time by limiting the value found 
-    delayVariableUpperBounds = {}
-
     # Determine the hyper-period of the tasks
     taskPeriods = [task['period'] for task in system['TaskStore']]
     hyperPeriod = math.lcm(*taskPeriods)
@@ -134,8 +127,6 @@ def lpScheduler(system):
 
     # The task schedule is analysed over a scheduling window, starting at 0 ns and 
     # ending at the makespan, rounded up to the next hyper-period.
-    # Limitation: End-to-end constraints where none of their instances appears within 
-    # the scheduling window will not be optimised.
     makespan = system['PluginParameters']['Makespan']
     schedulingWindow = math.ceil(makespan / hyperPeriod) * hyperPeriod
     print(f"Scheduling window: {schedulingWindow} ns")
@@ -151,20 +142,24 @@ def lpScheduler(system):
             continue
         taskDependenciesList.append(taskDependencyPair)
 
+    # Store last feasible task schedule
+    lastFeasibleSchedule = None
+
+    # Store the names of the dependency pair instances that we want to reduce their delays.
+    delayVariableUpperBounds = {}
 
     # Track the number of iterations to find solution    
     timesRan = 0
 
     # FIXME: Why do we even need to iterate?
-    # Iterate through each dependency and try to tighten the worst case end-to-end time
+    # Iterate through each dependency and try to tighten the task dependency delays
     for taskDependencyPair in taskDependenciesList:
-
         # Keep iterating LP solver until no further optimisations can be found
-        lookingForOptimalSolution = True
+        lookingForBetterSolution = True
         
         # List of LP constraint used to tighten the current dependency
         delayVariablesToTighten = []
-        while lookingForOptimalSolution:
+        while lookingForBetterSolution:
             print()
             print(f"Iteration {timesRan} ... {taskDependencyPair}")
             timesRan += 1
@@ -213,15 +208,14 @@ def lpScheduler(system):
                 # Get all instances of that task
                 taskName, instances = allTaskInstancesCopy.popitem()
                 for instance in instances:
-                    for key in allTaskInstancesCopy.keys():
-                        for other in allTaskInstancesCopy[key]:
-                            lp.writeTaskOverlapConstraint(instance, other)
+                    for otherTaskName, otherInstances in allTaskInstancesCopy.items():
+                        for otherInstance in otherInstances:
+                            lp.writeTaskOverlapConstraint(instance, otherInstance)
             
             lp.writeComment("Each destination task instance of a dependency can only be connected to one source")
 
-            # Constrain each event dependency task instance to only have one source task instance
+            # Constrain each dependency task instance to only have one source task instance
             for dependency in system['DependencyStore']:
-
                 # Dependency parameters
                 name = dependency['name']
                 srcTask = dependency['source']['task']
@@ -247,7 +241,6 @@ def lpScheduler(system):
             lp.writeComment("Tighten dependency delays")
             for delayVariable, delayValue in delayVariableUpperBounds.items():
                 # Add constraints to tighten the current dependency pair to find better solutions.
-                # delayVariablesToTighten contains names of the dependency pair instances that we want to reduce their delays.
                 if (delayVariable in delayVariablesToTighten):
                     constraint = f"{delayVariable} <= {delayValue - 1}"
                 else:
@@ -264,19 +257,18 @@ def lpScheduler(system):
 
             # Call the LP solver
             if Config.solver == Solver.GUROBI:
-                results, lines = CallGurobi()
+                results = CallGurobi()
             elif Config.solver == Solver.LPSOLVE:
-                results, lines = CallLPSolve()
+                results = CallLPSolve()
             
             print()
             print("Results:")
-            print("--------")
             if len(results) == 0 :
-                # If there are no results then the problem is infeasible
+                # If there are no results, then the problem is infeasible
                 print("LetSynchronise system is unschedulable!")
                 
                 # No need to try and tighten an infeasible problem
-                lookingForOptimalSolution = False
+                lookingForBetterSolution = False
                 # FIXME: Why remove all upper bounds? Why not just the upper bounds of taskDependencyPair?
                 delayVariableUpperBounds = {}
             else:
@@ -287,14 +279,14 @@ def lpScheduler(system):
                 # Create the task schedule that is encoded in the LP solution
                 lastFeasibleSchedule = exportSchedule(system, lp, allTaskInstances, results)
 
-                # Determine new constraints needed to tighten the dependency delays in the next iteration 
+                # Determine upper bounds needed to tighten the dependency delays in the next iteration 
                 delayVariablesToTighten = lp.dependencyTaskTable[taskDependencyPair]
                 delayVariableUpperBounds = parseLpResults(lp, results)       
             print("--------")
                 
             # If all instances of a LET task share the same parameters, then no more improvements are possible.
             if not Config.individualLetInstanceParams:
-                lookingForOptimalSolution = False
+                lookingForBetterSolution = False
 
         if not Config.individualLetInstanceParams:
             break
@@ -365,7 +357,6 @@ def exportSchedule(system, lp, allTaskInstances, results):
 # Call Gurobi and parse the result
 def CallGurobi():
     results = {}
-    lines = []
     with subprocess.Popen([Config.solverProg, "ResultFile=gurobiresult.sol", Config.lpFile], stdout=subprocess.PIPE) as proc:
         output = proc.stdout.read().decode("utf-8")
         if not "Model is infeasible" in output:
@@ -374,12 +365,11 @@ def CallGurobi():
             for line in lines:
                 fragment = re.split('\s+', line)
                 results[fragment[0]] = fragment[1] # Create dictionary of variables and their solutions
-    return results, lines
+    return results
 
 # Call LpSolve and parse the result
 def CallLPSolve():
     results = {}
-    lines = []
     with subprocess.Popen([Config.solverProg, Config.lpFile, '-ip'], stdout=subprocess.PIPE) as proc:
         output = proc.stdout.read().decode("utf-8")
         if not "This problem is infeasible" in output:
@@ -387,7 +377,7 @@ def CallLPSolve():
             for line in lines:
                 fragment = re.split('\s+', line)
                 results[fragment[0]] = fragment[1]  # Create dictionary of variables and their solutions
-    return results, lines
+    return results
 
 
 if __name__ == '__main__':
