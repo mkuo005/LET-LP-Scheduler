@@ -9,6 +9,7 @@ import socketserver
 
 # Import the required libraries
 import sys
+import traceback
 import subprocess
 import argparse
 import re
@@ -85,12 +86,14 @@ class Server(BaseHTTPRequestHandler):
             content_len = int(self.headers.get("content-length"))
             post_body = self.rfile.read(content_len)
         except Exception:
+            traceback.print_exc()
             self._set_error_headers("LetSynchronise system model could not be read")
             return
         
         try:
             system = json.loads(post_body.decode("utf-8"))
         except Exception:
+            traceback.print_exc()
             self._set_error_headers("LetSynchronise system model could not be loaded")
             return
         
@@ -99,9 +102,11 @@ class Server(BaseHTTPRequestHandler):
             if schedule == None:
                 raise Exception("LetSynchronise system is unschedulable!")
         except FileNotFoundError as error:
+            traceback.print_exc()
             self._set_error_headers(error)
             return
         except Exception as error:
+            traceback.print_exc()
             self._set_error_headers(f"LetSynchronise system model could not be scheduled: {error}")
             return
         
@@ -120,7 +125,7 @@ def lpScheduler(system):
     lastFeasibleSchedule = None
 
     # Constraints to improve end-to-end reaction time by limiting the value found 
-    limitEndtoEndConstraint = {}
+    delayVariableUpperBounds = {}
 
     # Determine the hyper-period of the tasks
     taskPeriods = [task['period'] for task in system['TaskStore']]
@@ -150,14 +155,15 @@ def lpScheduler(system):
     # Track the number of iterations to find solution    
     timesRan = 0
 
+    # FIXME: Why do we even need to iterate?
     # Iterate through each dependency and try to tighten the worst case end-to-end time
     for taskDependencyPair in taskDependenciesList:
 
-        # Keep iterating ILP solver until no further optimisations can be found
+        # Keep iterating LP solver until no further optimisations can be found
         lookingForOptimalSolution = True
         
-        # List of ILP constraint used to tighten the current dependency
-        constraintReductionList = []
+        # List of LP constraint used to tighten the current dependency
+        delayVariablesToTighten = []
         while lookingForOptimalSolution:
             print()
             print(f"Iteration {timesRan} ... {taskDependencyPair}")
@@ -231,7 +237,7 @@ def lpScheduler(system):
 
                 lp.writeDependencySourceTaskSelectionConstraint(name, srcTask, srcTaskInstances, destTask, destTaskInstances)
             
-            # FIXME: Refactor this into the loop above
+            # FIXME: Refactor this into the for-loop above
             lp.writeComment("Dependency delays")
             lp.write(lp.dependencyDelayConstraints)
             
@@ -239,19 +245,17 @@ def lpScheduler(system):
 
             # FIXME: Refactor into LP writers
             lp.writeComment("Tighten dependency delays")
-            for key in limitEndtoEndConstraint:
-                # The constraintReductionList contains dependency instances pairs of the currently processing dependency to improve the end-to-end time
-                # Tighten the constraint for this dependency to see if there are tighter better solutions
+            for delayVariable, delayValue in delayVariableUpperBounds.items():
+                # Add constraints to tighten the current dependency pair to find better solutions.
+                # delayVariablesToTighten contains names of the dependency pair instances that we want to reduce their delays.
+                if (delayVariable in delayVariablesToTighten):
+                    constraint = f"{delayVariable} <= {delayValue - 1}"
+                else:
+                    constraint = f"{delayVariable} <= {delayValue}"
                 if Config.solver == Solver.GUROBI:
-                    if (key in constraintReductionList):
-                        lp.write(key + " <= " + str(limitEndtoEndConstraint[key]-1) + "\n")
-                    else:
-                        lp.write(key + " <= " + str(limitEndtoEndConstraint[key]) + "\n")
+                    lp.write(f"{constraint}\n")
                 elif Config.solver == Solver.LPSOLVE:
-                    if (key in constraintReductionList):
-                        lp.write(key + " <= " + str(limitEndtoEndConstraint[key]-1) + ";\n")
-                    else:
-                        lp.write(key + " <= " + str(limitEndtoEndConstraint[key]) + ";\n")
+                    lp.write(f"{constraint};\n")
 
             # Create boolean variable constraint
             lp.writeBooleanConstraints()
@@ -273,20 +277,22 @@ def lpScheduler(system):
                 
                 # No need to try and tighten an infeasible problem
                 lookingForOptimalSolution = False
-                limitEndtoEndConstraint = {}
+                # FIXME: Why remove all upper bounds? Why not just the upper bounds of taskDependencyPair?
+                delayVariableUpperBounds = {}
             else:
                 # Problem is feasible
                 print("LetSynchronise system is schedulable")
                 print(f"Current summation of task dependency delays: {results['sumDependencyDelays']} ns")
                 
-                # Create the task schedule from the LP solution
-                limitEndtoEndConstraint, constraintReductionList = parseLPSolveResults(limitEndtoEndConstraint, taskDependencyPair, lp, results)       
-                
-                # Export the best task schedule
+                # Create the task schedule that is encoded in the LP solution
                 lastFeasibleSchedule = exportSchedule(system, lp, allTaskInstances, results)
+
+                # Determine new constraints needed to tighten the dependency delays in the next iteration 
+                delayVariablesToTighten = lp.dependencyTaskTable[taskDependencyPair]
+                delayVariableUpperBounds = parseLpResults(lp, results)       
             print("--------")
                 
-            # If all instances have the same offset there is no point to iterate for a solution as all solutions are the same as any solution is as good as another
+            # If all instances of a LET task share the same parameters, then no more improvements are possible.
             if not Config.individualLetInstanceParams:
                 lookingForOptimalSolution = False
 
@@ -296,29 +302,24 @@ def lpScheduler(system):
     print(f"Iterated a total of {timesRan} times")
     return lastFeasibleSchedule
 
-def parseLPSolveResults(limitEndtoEndConstraint, taskDependencyPair, lp, results):
-    currentWorstChainTimes = {}
-
-    # Get worst-case delays for each task dependency
-    for dependency in lp.dependencyTaskTable.keys():
-        constraints = lp.dependencyTaskTable[dependency]
-        for key in results.keys():
-            if ("EtoE" in key):
-                if key in constraints:
-                    if ((dependency in currentWorstChainTimes.keys()) == True):
-                        if(currentWorstChainTimes[dependency] <  float(results[key])):
-                            currentWorstChainTimes[dependency] = float(results[key])
-                    else:
-                        currentWorstChainTimes[dependency] =  float(results[key])
-
-    constraintReductionList = []
-    for dependency in lp.dependencyTaskTable.keys():  
-        constraints = lp.dependencyTaskTable[dependency]
-        for c in constraints:
-            limitEndtoEndConstraint[c] = round(currentWorstChainTimes[dependency])
-            if (dependency == taskDependencyPair):
-                constraintReductionList.append(c)
-    return limitEndtoEndConstraint, constraintReductionList
+def parseLpResults(lp, results):
+    delayResults = {solutionVariable: solutionValue for solutionVariable, solutionValue in results.items() if "EtoE_" in solutionVariable}
+    
+    # Get the max delay of each task dependency instance
+    maxDependencyDelays = {}
+    for dependency, delayVariables in lp.dependencyTaskTable.items():
+        maxDependencyDelays[dependency] = -1
+        for solutionVariable, solutionValue in delayResults.items():
+            if solutionVariable in delayVariables:
+                maxDependencyDelays[dependency] = max(maxDependencyDelays[dependency], float(solutionValue))
+    
+    # Get new upper bounds for each task dependency instance
+    delayVariableUpperBounds = {}
+    for dependency, delayVariables in lp.dependencyTaskTable.items():        
+        for delayVariable in delayVariables:
+            delayVariableUpperBounds[delayVariable] = round(maxDependencyDelays[dependency])
+    
+    return delayVariableUpperBounds
 
 def exportSchedule(system, lp, allTaskInstances, results):
     schedule = {

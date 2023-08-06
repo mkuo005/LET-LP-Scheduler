@@ -2,10 +2,11 @@
 Logical Execution Time Linear Programming Scheduler is an [external plugin](https://github.com/uniba-swt/LetSynchronise/blob/master/sources/plugins/ls.plugin.goal.ilp.js) for the [LetSynchronise](https://github.com/uniba-swt/LetSynchronise) framework that minimises the delays of task dependencies.  
 
 Limitations:
-* The task schedule is analysed over a scheduling window, starting at 0 ns and ending at the makespan, rounded up to the next hyper-period. End-to-end constraints where none of their instances appears within the scheduling window are not optimised.
-* Can only indirectly minimise the overall end-to-end response times of all event chains.
+* The task schedule is analysed over a scheduling window, starting at 0 ns and ending at the makespan, rounded up to the next hyper-period.
+* Only minimises task dependency delays. This indirectly minimises the overall end-to-end response times of all event chains.
+* Task dependencies are minimised in random order. No concept of priority or importance.
 * Tasks are scheduled non-preemptively.
-* Tasks are scheduled on a single-core processor.
+* Tasks are scheduled for execution on a single-core processor.
 
 ## Dependencies
 * Python 3
