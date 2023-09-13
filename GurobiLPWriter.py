@@ -6,8 +6,6 @@ class GurobiLPWriter:
         self.lpLargeConstant = lpLargeConstant
         
         self.dependencyInstanceDelayVariables = {}
-        self.dependencyDelaysSum = ""
-        self.dependencyDelayConstraints = ""
         
         # All Boolean and integer variables used
         self.booleanVariables = set()
@@ -17,12 +15,12 @@ class GurobiLPWriter:
         self.file.write(string)
 
     def writeObjective(self):
-        self.write(f"Minimize\n{self.objectiveVariable}\n")
-        self.write("Subject To\n")
+        self.write(f"Minimize\n{self.objectiveVariable}\nSubject To\n")
 
     def writeObjectiveEquation(self):
         self.writeComment("Objective equation")
-        self.write(f"{self.objectiveVariable} {self.dependencyDelaysSum} = 0;\n")
+        dependencyInstanceDelays = ' - '.join([x for v in self.dependencyInstanceDelayVariables.values() for x in v])
+        self.write(f"{self.objectiveVariable} - {dependencyInstanceDelays} = 0;\n")
 
     def writeComment(self, string):
         None
@@ -40,13 +38,13 @@ class GurobiLPWriter:
         self.intVariables.add(self.taskInstEndTime(taskInstance))
 
         # Task execution has to start at or after the period
-        self.write(f"{self.taskInstStartTime(taskInstance)} >= {instanceStartTime};\n")
+        self.write(f"{self.taskInstStartTime(taskInstance)} >= {instanceStartTime}\n")
         
         # Task execution has to end at or before the period
-        self.write(f"{self.taskInstEndTime(taskInstance)} <= {instanceEndTime};\n")
+        self.write(f"{self.taskInstEndTime(taskInstance)} <= {instanceEndTime}\n")
 
         # Task execution time has to be greater than or equal to wcet
-        self.write(f"{self.taskInstEndTime(taskInstance)} - {self.taskInstStartTime(taskInstance)} >= {wcet};\n")
+        self.write(f"{self.taskInstEndTime(taskInstance)} - {self.taskInstStartTime(taskInstance)} >= {wcet}\n")
 
         if not individualLetInstanceParams:
             #Make sure all LET instances start and end at the same time
@@ -64,55 +62,49 @@ class GurobiLPWriter:
         self.write(self.taskInstEndTime(otherTaskInst)  + " - " + self.taskInstStartTime(currentTaskInst) + " + " + str(self.lpLargeConstant) + " " + controlVariable + " <= "+str(self.lpLargeConstant)  + "\n")
 
     def writeDependencySourceTaskSelectionConstraint(self, name, taskDependencyPair, srcTaskInstances, destTaskInstances):
-        self.writeComment(f"Select source task for each instance of dependency {name}")
-
+        self.writeComment(f"Select source task for each instance of dependency {name}. Calculate dependency delays")
+        
+        # There can only be one source task for a task dependency instance
         self.dependencyInstanceDelayVariables[taskDependencyPair] = []
-
         for destInst in destTaskInstances:
-            srcInstString = ""
-            first = True
-
-            #Iterate over source task instances
+            # Iterate over source task instances
+            srcInstControlVariables = list()
+            srcInstSelectionString = ""
+            dependencyDelayConstraintsString = ""
             for srcInst in srcTaskInstances:
-                #instances
-                endToEndConstraintID = srcInst+"_"+destInst
-                #instance control variable
-                instanceConnectionControl = "DEP_"+endToEndConstraintID
-                self.booleanVariables.add(instanceConnectionControl)
-                #Create the constraint where all the destination instance to source pairs possible are summed and should equal 1 i.e., only one pair is selected
-                if (first):
-                    srcInstString += instanceConnectionControl
-                    first = False
-                else:
-                    srcInstString += " + " + instanceConnectionControl
-                
-                X = self.taskInstEndTime(destInst) + " - " + self.taskInstStartTime(srcInst)
-                self.dependencyDelayConstraints += "DELAY_"+ endToEndConstraintID + " >= 0\n"
-                self.dependencyDelayConstraints += X +" + "+str(self.lpLargeConstant)+" " +instanceConnectionControl + " - " + "DELAY_"+ endToEndConstraintID + " <= " + str(self.lpLargeConstant)  +"\n"
-                self.dependencyDelayConstraints += X +" - "+str(self.lpLargeConstant)+" " +instanceConnectionControl + " - " + "DELAY_"+ endToEndConstraintID + " >= " +" -"+str(self.lpLargeConstant) +"\n"
-                                
-                # Add this task dependency delay to the sum of all dependency delays
-                self.dependencyDelaysSum += " - "
-                self.dependencyDelaysSum += "DELAY_"+ endToEndConstraintID
-                self.dependencyInstanceDelayVariables[taskDependencyPair].append("DELAY_"+ endToEndConstraintID)     
+                # Name for task dependency instance and its boolean control variable.
+                dependencyInstance = f"{srcInst}_{destInst}"
+                dependencyInstanceControlVariable = f"DEP_{dependencyInstance}"
+                self.booleanVariables.add(dependencyInstanceControlVariable)
+                srcInstControlVariables.append(dependencyInstanceControlVariable)
 
-                # instance connection is only vaild if the source task finsihes before the destination task start time or else it must be zero
-                # The constraint should be 1 when the start_time is larger than the end_time therefore a -ve value or 0
-                self.write(self.taskInstEndTime(srcInst) + " - " + self.taskInstStartTime(destInst) + " + " +str(self.lpLargeConstant) +" "+ instanceConnectionControl + " <= " + str(self.lpLargeConstant) + "\n")
+                # Task dependency is valid only when the source task does not end after the start of the destination task.
+                # dependencyInstanceControlVariable is set to 1 if this is the case.
+                srcInstSelectionString += f"{self.taskInstEndTime(srcInst)} - {self.taskInstStartTime(destInst)} + {self.lpLargeConstant} {dependencyInstanceControlVariable} <= {self.lpLargeConstant}\n"
+
+                # Calculate the delay of the dependency instance.
+                delay = f"{self.taskInstEndTime(destInst)} - {self.taskInstStartTime(srcInst)}"
+                dependencyDelayConstraintsString += f"DELAY_{dependencyInstance} >= 0\n"
+                dependencyDelayConstraintsString += f"{delay} + {self.lpLargeConstant} {dependencyInstanceControlVariable} - DELAY_{dependencyInstance} <= {self.lpLargeConstant}\n"
+                dependencyDelayConstraintsString += f"{delay} - {self.lpLargeConstant} {dependencyInstanceControlVariable} - DELAY_{dependencyInstance} >= -{self.lpLargeConstant}\n"
                                 
-            #There can only be one source
-            self.write(srcInstString+" = 1\n")
+                self.dependencyInstanceDelayVariables[taskDependencyPair].append("DELAY_"+ dependencyInstance)     
+
+            self.write(srcInstSelectionString)   
+                                
+            # Create the constraint where all possible dependency instances sum to 1, i.e., only one instance is selected
+            self.write(f"{' + '.join(srcInstControlVariables)} = 1\n")
+
+            self.write(f"{dependencyDelayConstraintsString}\n")
 
     def writeBooleanConstraints(self):
         self.writeComment("Boolean variables")
         self.write("Bounds\n")
-        binaries = ""
-        for b in self.booleanVariables:
-            binaries = binaries + b + " "
-        self.write("binary "+ binaries+"\n")
-        
+        self.write(f"binary {' '.join(self.booleanVariables)}\n")
+
     def writeIntegerConstraints(self):
         self.writeComment("Integer variables")
+        #
         pass
 
     def close(self):

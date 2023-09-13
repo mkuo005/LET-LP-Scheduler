@@ -45,7 +45,7 @@ Config = SimpleNamespace(
     exeSuffix = "",
     lpFile = "system.lp",
     objectiveVariable = "sumDependencyDelays",
-    individualLetInstanceParams = True  # Each instance of a LET task can have different parameters
+    individualLetInstanceParams = False  # Each instance of a LET task can have different parameters
 )
 
 # Web server to handle requests from the LetSyncrhonise LP plugin, 
