@@ -405,6 +405,7 @@ if __name__ == '__main__':
         try:
             file = open(args.file)
             system = json.load(file)
+            system['PluginParameters'] = {'Makespan': 1} #make makespan equal to hyperperiod
             lpScheduler(system)
         except FileNotFoundError:
             print(f"Unable to open \"{args.file}\"!")
