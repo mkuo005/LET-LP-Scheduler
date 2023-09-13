@@ -51,14 +51,18 @@ class LpSolveLPWriter:
             self.write(f"{self.taskInstStartTime(taskName)} = {self.taskInstStartTime(taskInstance)} - {instanceStartTime};\n")
             self.write(f"{self.taskInstEndTime(taskName)} = {self.taskInstEndTime(taskInstance)} - {instanceStartTime};\n")
 
-    def writeTaskOverlapConstraint(self, currentTaskInst, otherTaskInst):
-        controlVariable = f"EXE_{currentTaskInst}_{otherTaskInst}"
-        self.booleanVariables.add(controlVariable)
+    def writeTaskOverlapConstraint(self, currentTaskInst, otherTaskInst, cores):
+        controlVariables = []
+        for core in cores:
+            coreName = core["name"]
+            controlVariable = f"EXE_{currentTaskInst}_{otherTaskInst}_{coreName}"
+            self.booleanVariables.add(controlVariable)
+            controlVariables.append(controlVariable)
 
         # These two constraints ensure the tasks either execute before OR after one another and not overlap
         # inst_end_time - other_start_time <= XXXXX * control
         # other_end_time - inst_start_time <= XXXXX - XXXXX * control
-        self.write(f"{self.taskInstEndTime(currentTaskInst)} - {self.taskInstStartTime(otherTaskInst)} <= {self.lpLargeConstant} {controlVariable};\n")
+        self.write(f"{self.taskInstEndTime(currentTaskInst)} - {self.taskInstStartTime(otherTaskInst)} <= {self.lpLargeConstant} {controlVariable};\n") #Need to think about only enable constraint if they are on the same core
         self.write(f"{self.taskInstEndTime(otherTaskInst)} - {self.taskInstStartTime(currentTaskInst)} <= {self.lpLargeConstant} - {self.lpLargeConstant} {controlVariable};\n")
 
     def writeDependencySourceTaskSelectionConstraint(self, name, taskDependencyPair, srcTaskInstances, destTaskInstances):

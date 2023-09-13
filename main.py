@@ -120,6 +120,8 @@ class Server(BaseHTTPRequestHandler):
 # FIXME: Refactor to generate LP information and then generate LP file in one go. 
 # LP Scheduler
 def lpScheduler(system):
+    
+
     # Determine the hyper-period of the tasks
     taskPeriods = [task['period'] for task in system['TaskStore']]
     hyperPeriod = math.lcm(*taskPeriods)
@@ -210,7 +212,7 @@ def lpScheduler(system):
                 for instance in instances:
                     for otherTaskName, otherInstances in allTaskInstancesCopy.items():
                         for otherInstance in otherInstances:
-                            lp.writeTaskOverlapConstraint(instance, otherInstance)
+                            lp.writeTaskOverlapConstraint(instance, otherInstance, system["CoreStore"])
             
             lp.writeComment("Each destination task instance of a dependency can only be connected to one source")
 

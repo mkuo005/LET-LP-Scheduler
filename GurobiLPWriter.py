@@ -51,7 +51,7 @@ class GurobiLPWriter:
             self.write(self.taskInstStartTime(taskInstance) + " - "+ self.taskInstStartTime(taskName) + " = " + str(instanceStartTime) + ";\n")
             self.write(self.taskInstEndTime(taskInstance) + " - "+ self.taskInstEndTime(taskName) + " = " + str(instanceStartTime) + ";\n")
 
-    def writeTaskOverlapConstraint(self, currentTaskInst, otherTaskInst):
+    def writeTaskOverlapConstraint(self, currentTaskInst, otherTaskInst, cores): #to fix add multicore support
         controlVariable = "EXE_"+currentTaskInst+"_"+otherTaskInst
         self.booleanVariables.add(controlVariable)
 
