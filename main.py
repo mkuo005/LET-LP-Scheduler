@@ -272,7 +272,7 @@ def lpScheduler(system):
             else:
                 # Problem is feasible
                 print("LetSynchronise system is schedulable")
-                print(f"Current summation of task dependency delays: {results['sumDependencyDelays']} ns")
+                print(f"Current summation of task dependency delays: {results[Config.objectiveVariable]} ns")
                 
                 # Create the task schedule that is encoded in the LP solution
                 lastFeasibleSchedule = exportSchedule(system, lp, allTaskInstances, results)
@@ -406,9 +406,15 @@ if __name__ == '__main__':
             file = open(args.file)
             system = json.load(file)
             system['PluginParameters'] = {'Makespan': 1} #make makespan equal to hyperperiod
-            lpScheduler(system)
-        except FileNotFoundError:
+            schedule = lpScheduler(system)
+            scheduleFile = open("schedule.json", "w+")
+            scheduleFile.write(json.dumps(schedule, indent=2))
+            scheduleFile.close()
+        except FileNotFoundError as e:
             print(f"Unable to open \"{args.file}\"!")
+            print(e)
+            traceback.print_exc()
+            
     else:
         webServer = ThreadingHTTPServer((Config.hostName, Config.serverPort), Server)
         print(f"Server started at http://{Config.hostName}:{Config.serverPort}")

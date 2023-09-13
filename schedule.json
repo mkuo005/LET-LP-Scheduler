@@ -1,0 +1,131 @@
+{
+  "TaskInstancesStore": [
+    {
+      "name": "task_a",
+      "value": [
+        {
+          "instance": 0,
+          "periodStartTime": 0,
+          "letStartTime": 0,
+          "letEndTime": 1000000,
+          "periodEndTime": 3000000,
+          "executionTime": 1000000,
+          "executionIntervals": [
+            {
+              "startTime": 0,
+              "endTime": 1000000
+            }
+          ]
+        },
+        {
+          "instance": 1,
+          "periodStartTime": 3000000,
+          "letStartTime": 3000000,
+          "letEndTime": 4000000,
+          "periodEndTime": 6000000,
+          "executionTime": 1000000,
+          "executionIntervals": [
+            {
+              "startTime": 3000000,
+              "endTime": 4000000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "task_b",
+      "value": [
+        {
+          "instance": 0,
+          "periodStartTime": 0,
+          "letStartTime": 1000000,
+          "letEndTime": 1500000,
+          "periodEndTime": 2000000,
+          "executionTime": 500000,
+          "executionIntervals": [
+            {
+              "startTime": 1000000,
+              "endTime": 1500000
+            }
+          ]
+        },
+        {
+          "instance": 1,
+          "periodStartTime": 2000000,
+          "letStartTime": 2000000,
+          "letEndTime": 2500000,
+          "periodEndTime": 4000000,
+          "executionTime": 500000,
+          "executionIntervals": [
+            {
+              "startTime": 2000000,
+              "endTime": 2500000
+            }
+          ]
+        },
+        {
+          "instance": 2,
+          "periodStartTime": 4000000,
+          "letStartTime": 4000000,
+          "letEndTime": 4500000,
+          "periodEndTime": 6000000,
+          "executionTime": 500000,
+          "executionIntervals": [
+            {
+              "startTime": 4000000,
+              "endTime": 4500000
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "task_c",
+      "value": [
+        {
+          "instance": 0,
+          "periodStartTime": 0,
+          "letStartTime": 1500000,
+          "letEndTime": 2000000,
+          "periodEndTime": 2000000,
+          "executionTime": 500000,
+          "executionIntervals": [
+            {
+              "startTime": 1500000,
+              "endTime": 2000000
+            }
+          ]
+        },
+        {
+          "instance": 1,
+          "periodStartTime": 2000000,
+          "letStartTime": 2500000,
+          "letEndTime": 3000000,
+          "periodEndTime": 4000000,
+          "executionTime": 500000,
+          "executionIntervals": [
+            {
+              "startTime": 2500000,
+              "endTime": 3000000
+            }
+          ]
+        },
+        {
+          "instance": 2,
+          "periodStartTime": 4000000,
+          "letStartTime": 4500000,
+          "letEndTime": 5000000,
+          "periodEndTime": 6000000,
+          "executionTime": 500000,
+          "executionIntervals": [
+            {
+              "startTime": 4500000,
+              "endTime": 5000000
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
