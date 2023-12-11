@@ -361,7 +361,7 @@ def CallGurobi():
             data = open("gurobiresult.sol", "r").read()
             lines = filter(lambda line: len(line) != 0, data.splitlines())
             for line in lines:
-                fragment = re.split('\s+', line)
+                fragment = re.split(r'\s+', line)
                 results[fragment[0]] = fragment[1] # Create dictionary of variables and their solutions
     return results
 
@@ -373,7 +373,7 @@ def CallLPSolve():
         if not "This problem is infeasible" in output:
             lines = filter(lambda line: len(line) != 0, output.splitlines())
             for line in lines:
-                fragment = re.split('\s+', line)
+                fragment = re.split(r'\s+', line)
                 results[fragment[0]] = fragment[1]  # Create dictionary of variables and their solutions
     return results
 
