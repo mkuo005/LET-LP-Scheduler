@@ -15,6 +15,7 @@ import argparse
 import re
 import json
 import math
+import pulp as pl
 from enum import Enum
 from types import SimpleNamespace
 
@@ -31,15 +32,8 @@ from PuLPWriter import PuLPWriter
 class Solver(Enum):
     NONE = 0
     GUROBI = 1
-    LPSOLVE = 2
-    PULP = 3
+    PULP = 2
 
-SolverProg = [
-    "none",
-    "gurobi_cl",
-    "lp_solve",
-    "none"
-]
 
 Config = SimpleNamespace(
     hostName = "localhost",
@@ -122,7 +116,6 @@ class Server(BaseHTTPRequestHandler):
         self.do_POST();
 
 
-# FIXME: Refactor to generate LP information and then generate LP file in one go. 
 # LP Scheduler
 def lpScheduler(system):
     # Determine the hyper-period of the tasks
@@ -170,12 +163,7 @@ def lpScheduler(system):
             timesRan += 1
 
             # Create LP writer for the selected solver
-            if Config.solver == Solver.GUROBI: 
-                lp = GurobiLPWriter(Config.lpFile, Config.objectiveVariable, lpLargeConstant)
-            elif Config.solver == Solver.LPSOLVE:
-                lp = LpSolveLPWriter(Config.lpFile, Config.objectiveVariable, lpLargeConstant)
-            elif Config.solver == Solver.PULP:
-                lp = PuLPWriter(Config.lpFile, Config.objectiveVariable, lpLargeConstant)
+            lp = PuLPWriter(Config.lpFile, Config.objectiveVariable, lpLargeConstant)
 
             # Create the objective to minimize task dependency delay
             lp.writeObjective()
@@ -239,49 +227,24 @@ def lpScheduler(system):
 
                 lp.writeDependencySourceTaskSelectionConstraint(name, dependencyPair, srcTaskInstances, destTaskInstances)
 
-            # FIXME: Refactor into LP writers
             lp.writeComment("Tighten dependency delays")
             for delayVariable, delayValue in delayVariableUpperBounds.items():
                 # Add constraints to tighten the current dependency pair to find better solutions.
-                if Config.solver == Solver.GUROBI:
-                    if (delayVariable in delayVariablesToTighten):
-                        constraint = f"{delayVariable} <= {delayValue - 1}"
-                    else:
-                        constraint = f"{delayVariable} <= {delayValue}"
-                    lp.write(f"{constraint}\n")
-                elif Config.solver == Solver.LPSOLVE:
-                    if (delayVariable in delayVariablesToTighten):
-                        constraint = f"{delayVariable} <= {delayValue - 1}"
-                    else:
-                        constraint = f"{delayVariable} <= {delayValue}"
-                    lp.write(f"{constraint};\n")
-                elif Config.solver == Solver.PULP:
-                    if (delayVariable in delayVariablesToTighten):
-                        lp.prob += lp.getIntVar(delayVariable) <= delayValue - 1
-                    else:
-                        lp.prob += lp.getIntVar(delayVariable) <= delayValue 
+                lp.writeDelayConstraints(delayVariable, delayValue, delayVariable in delayVariablesToTighten)
+
             
             # Create objective equation
             lp.writeObjectiveEquation()
             
-            if Config.solver == Solver.GUROBI or Config.solver == Solver.LPSOLVE:
-                # Create boolean variable constraint
-                lp.writeBooleanConstraints()
-
-                lp.close()
-
             # Call the LP solver
+            results = {}
             if Config.solver == Solver.GUROBI:
-                results = CallGurobi()
-            elif Config.solver == Solver.LPSOLVE:
-                results = CallLPSolve()
+                lp.solve(pl.GUROBI())
             elif Config.solver == Solver.PULP:
-                results = {}
-                lp.solve()
-                if (lp.prob.status == 1): 
-                    for v in lp.prob.variables():
-                        #print(v.name, "", v.varValue)
-                        results[str(v.name)] = v.varValue
+                lp.solve(None) # uses the default PuLP solver
+            if (lp.prob.status == 1): 
+                for v in lp.prob.variables():
+                    results[str(v.name)] = v.varValue
 
             print("Results:")
             if len(results) == 0 :
@@ -375,30 +338,7 @@ def exportSchedule(system, lp, allTaskInstances, results):
         schedule['TaskInstancesStore'].append(taskInstancesJson)
     return schedule
 
-# Call Gurobi and parse the result
-def CallGurobi():
-    results = {}
-    with subprocess.Popen([Config.solverProg, "ResultFile=gurobiresult.sol", Config.lpFile], stdout=subprocess.PIPE) as proc:
-        output = proc.stdout.read().decode("utf-8")
-        if not "Model is infeasible" in output:
-            data = open("gurobiresult.sol", "r").read()
-            lines = filter(lambda line: len(line) != 0, data.splitlines())
-            for line in lines:
-                fragment = re.split(r'\s+', line)
-                results[fragment[0]] = fragment[1] # Create dictionary of variables and their solutions
-    return results
 
-# Call LpSolve and parse the result
-def CallLPSolve():
-    results = {}
-    with subprocess.Popen([Config.solverProg, Config.lpFile, '-ip'], stdout=subprocess.PIPE) as proc:
-        output = proc.stdout.read().decode("utf-8")
-        if not "This problem is infeasible" in output:
-            lines = filter(lambda line: len(line) != 0, output.splitlines())
-            for line in lines:
-                fragment = re.split(r'\s+', line)
-                results[fragment[0]] = fragment[1]  # Create dictionary of variables and their solutions
-    return results
 
 
 if __name__ == '__main__':
@@ -406,7 +346,7 @@ if __name__ == '__main__':
     print("----------------")
     parser = argparse.ArgumentParser()
     parser.add_argument("--file", type=str, default="")
-    parser.add_argument("--solver", choices=["gurobi", "lpsolve", "PuLP"], type=str, required=True)
+    parser.add_argument("--solver", choices=["gurobi", "lpsolve", "pulp"], type=str, required=True)
     args = parser.parse_args()
     
    # Set the OS and executable file suffix
@@ -415,16 +355,11 @@ if __name__ == '__main__':
         Config.exeSuffix = ".exe"
     
     # Set the LP solver
-    if args.solver == "lpsolve":
-        Config.solver = Solver.LPSOLVE
-        Config.solverProg = SolverProg[Solver.LPSOLVE.value] + Config.exeSuffix
-    elif args.solver == "gurobi":
+    if args.solver == "gurobi":
         Config.solver = Solver.GUROBI
-        Config.solverProg = SolverProg[Solver.GUROBI.value]
-    elif args.solver == "PuLP":
+    elif args.solver == "pulp":
         Config.solver = Solver.PULP
-        Config.solverProg = SolverProg[Solver.PULP.value]
-    print(f"Solver: {Config.solverProg}")
+    print(f"Solver: {Config.solver}")
 
     # Specify a LET system model file and create a schedule, or run in webserver mode for the LetSynchronise plugin.
     if len(args.file) > 0:

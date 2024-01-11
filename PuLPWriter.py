@@ -93,8 +93,6 @@ class  PuLPWriter:
             destaskInstEndTimeVar = self.getIntVar(self.taskInstEndTime(destInst))
             # Iterate over source task instances
             srcInstControlVariables = list()
-            srcInstSelectionString = ""
-            dependencyDelayConstraintsString = ""
             for srcInst in srcTaskInstances:
                 srcTaskInstStartTimeVar = self.getIntVar(self.taskInstStartTime(srcInst))
                 srcTaskInstEndTimeVar = self.getIntVar(self.taskInstEndTime(srcInst))
@@ -106,7 +104,6 @@ class  PuLPWriter:
 
                 # Task dependency is valid only when the source task does not end after the start of the destination task.
                 # dependencyInstanceControlVariable is set to 1 if this is the case.
-                #srcInstSelectionString += f"{self.taskInstEndTime(srcInst)} - {self.taskInstStartTime(destInst)} + {self.lpLargeConstant} {dependencyInstanceControlVariable} <= {self.lpLargeConstant}\n"
                 self.prob += srcTaskInstEndTimeVar - destTaskInstStartTimeVar + self.lpLargeConstant * dependencyInstanceControlVariable <= self.lpLargeConstant
                 
                 # Calculate the delay of the dependency instance.
@@ -119,13 +116,20 @@ class  PuLPWriter:
                 self.dependencyInstanceDelayVariables[taskDependencyPair].append(dependencyInstanceVar.name)     
     
             # Create the constraint where all possible dependency instances sum to 1, i.e., only one instance is selected
-            # self.write(f"{' + '.join(srcInstControlVariables)} = 1\n")
             self.prob += pl.lpSum(srcInstControlVariables) == 1
 
-            # self.write(f"{dependencyDelayConstraintsString}\n")
 
-    def solve(self):
-        self.prob.writeLP(self.filename)
-        self.prob.solve(pl.GUROBI())
+    def writeDelayConstraints(self, delayVariable, delayValue, isTighten):
+        if (isTighten):
+            self.prob += self.getIntVar(delayVariable) <= delayValue - 1
+        else:
+            self.prob += self.getIntVar(delayVariable) <= delayValue 
+            
+    def solve(self, solver):
+        #self.prob.writeLP(self.filename)
+        #self.prob.writeMPS(self.filename+".mps")
+        self.prob.solve(solver)
+        
+        #print(self.prob.variables)
 
 
