@@ -19,11 +19,6 @@ import pulp as pl
 from enum import Enum
 from types import SimpleNamespace
 
-# Import LpSolve constraint generator
-from LpSolveLPWriter import LpSolveLPWriter
-
-# Import Gurobi constraint generator
-from GurobiLPWriter import GurobiLPWriter
 
 # Import PuLP constraint generator
 from PuLPWriter import PuLPWriter
@@ -157,6 +152,10 @@ def lpScheduler(system):
         
         # List of LP constraint used to tighten the current dependency
         delayVariablesToTighten = []
+
+        # Last summation of task dependency delays
+        lastDelays = -1
+        
         while lookingForBetterSolution:
             print()
             print(f"Iteration {timesRan} ... {taskDependencyPair}")
@@ -259,7 +258,7 @@ def lpScheduler(system):
                 # Problem is feasible
                 print("LetSynchronise system is schedulable")
                 print(f"Current summation of task dependency delays: {results[Config.objectiveVariable]} ns")
-                
+                lastDelays = results[Config.objectiveVariable]
                 # Create the task schedule that is encoded in the LP solution
                 lastFeasibleSchedule = exportSchedule(system, lp, allTaskInstances, results)
 
@@ -276,6 +275,7 @@ def lpScheduler(system):
             break
             
     print(f"Iterated a total of {timesRan} times")
+    print(f"Final summation of task dependency delays: {lastDelays} ns")
     return lastFeasibleSchedule
 
 def parseLpResults(lp, results):
@@ -346,7 +346,7 @@ if __name__ == '__main__':
     print("----------------")
     parser = argparse.ArgumentParser()
     parser.add_argument("--file", type=str, default="")
-    parser.add_argument("--solver", choices=["gurobi", "lpsolve", "pulp"], type=str, required=True)
+    parser.add_argument("--solver", choices=["gurobi", "pulp"], type=str, required=True)
     args = parser.parse_args()
     
    # Set the OS and executable file suffix
@@ -371,6 +371,7 @@ if __name__ == '__main__':
             scheduleFile = open("schedule.json", "w+")
             scheduleFile.write(json.dumps(schedule, indent=2))
             scheduleFile.close()
+            
         except FileNotFoundError as e:
             print(f"Unable to open \"{args.file}\"!")
             print(e)
