@@ -39,7 +39,8 @@ Config = SimpleNamespace(
     exeSuffix = "",
     lpFile = "system.lp",
     objectiveVariable = "sumDependencyDelays",
-    individualLetInstanceParams = True  # Each instance of a LET task can have different parameters
+    individualLetInstanceParams = False,  # Each instance of a LET task can have different parameters
+    useOffSet = True # Enable task offset
 )
 
 # Web server to handle requests from the LetSyncrhonise LP plugin, 
@@ -167,32 +168,9 @@ def lpScheduler(system):
             # Create the objective to minimize task dependency delay
             lp.writeObjective()
 
-            # All task instances within the scheduling window
-            allTaskInstances = {}
-
             # Encode the task instances over the scheduling window as LP constraints
-            for task in system['TaskStore']:
-                # Get task parameters
-                taskName = task['name']
-                taskWcet = task['wcet']
-                taskPeriod = task['period']
-                
-                lp.writeComment(f"Task instance properties of {taskName}")
-                
-                # Create the task instances that appear inside the scheduling window
-                instances = []
-                for instanceStartTime in range(0, schedulingWindow, taskPeriod):
-                    # Task instance name includes an instance number
-                    instanceName = f"{taskName}_{len(instances)}"
-                    instances.append(instanceName)
-
-                    # Compute task instance end time
-                    instanceEndTime = instanceStartTime + taskPeriod
-                    
-                    # Encode the execution bounds of the task instance in LP constraints
-                    lp.writeTaskInstanceExecutionBounds(taskName, instanceName, instanceStartTime, instanceEndTime, taskWcet, Config.individualLetInstanceParams)
-                
-                allTaskInstances[taskName] = instances
+            # Return all task instances within the scheduling window
+            allTaskInstances = lp.encodeTaskInstances(system, schedulingWindow, Config)
             
             lp.writeComment("Make sure task executions do not overlap")
 
