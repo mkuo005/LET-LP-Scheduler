@@ -40,7 +40,7 @@ Config = SimpleNamespace(
     lpFile = "system.lp",
     objectiveVariable = "sumDependencyDelays",
     individualLetInstanceParams = False,  # Each instance of a LET task can have different parameters
-    useOffSet = True # Enable task offset
+    useOffSet = False # Enable task offset
 )
 
 # Web server to handle requests from the LetSyncrhonise LP plugin, 
@@ -168,49 +168,28 @@ def lpScheduler(system):
             # Create the objective to minimize task dependency delay
             lp.writeObjective()
 
+            # Equestion 2
             # Encode the task instances over the scheduling window as LP constraints
             # Return all task instances within the scheduling window
-            allTaskInstances = lp.encodeTaskInstances(system, schedulingWindow, Config)
+            allTaskInstances = lp.createTaskInstancesAsConstraints(system, schedulingWindow, Config)
             
-            lp.writeComment("Make sure task executions do not overlap")
+            # Equestion 3
+            # Create constraints that ensures no two tasks overlap (Single Core)
+            lp.createTaskExecutionConstraints(allTaskInstances.copy())
 
-            # Add pairwise task constraints to make sure task executions do not overlap (single core)
-            allTaskInstancesCopy = allTaskInstances.copy()
-            while bool(allTaskInstancesCopy):
-                # Get all instances of that task
-                taskName, instances = allTaskInstancesCopy.popitem()
-                for instance in instances:
-                    for otherTaskName, otherInstances in allTaskInstancesCopy.items():
-                        for otherInstance in otherInstances:
-                            lp.writeTaskOverlapConstraint(instance, otherInstance)
+            # Equestion 4
+            # A dependency instance is simply a pair of source and destination task instances
+            # Each dependency instance can only have 1 source task but can have mutiple destinations
+            # The selected source tasks must complete its execution before the destination task
+            lp.createTaskDependencyConstraints(system, allTaskInstances)
+
+            if Config.individualLetInstanceParams:
+                lp.writeComment("Tighten dependency delays")
+                for delayVariable, delayValue in delayVariableUpperBounds.items():
+                    # Add constraints to tighten the current dependency pair to find better solutions.
+                    lp.writeDelayConstraints(delayVariable, delayValue, delayVariable in delayVariablesToTighten)
             
-            lp.writeComment("Each destination task instance of a dependency can only be connected to one source")
-
-            # Constrain each dependency task instance to only have one source task instance
-            for dependency in system['DependencyStore']:
-                # Dependency parameters
-                name = dependency['name']
-                srcTask = dependency['source']['task']
-                destTask = dependency['destination']['task']
-                dependencyPair = f"{dependency['source']['task']}_{dependency['destination']['task']}"
-
-                # Dependencies to the environment are left unconstrained.
-                if "__system" in dependencyPair:
-                    continue
-
-                # Get source and destination task instances
-                srcTaskInstances = allTaskInstances[srcTask]
-                destTaskInstances = allTaskInstances[destTask]
-
-                lp.writeDependencySourceTaskSelectionConstraint(name, dependencyPair, srcTaskInstances, destTaskInstances)
-
-            lp.writeComment("Tighten dependency delays")
-            for delayVariable, delayValue in delayVariableUpperBounds.items():
-                # Add constraints to tighten the current dependency pair to find better solutions.
-                lp.writeDelayConstraints(delayVariable, delayValue, delayVariable in delayVariablesToTighten)
-
-            
-            # Create objective equation
+            # Create objective equation has to be called after createTaskDependencyConstraints as the depenedency selection varaibles are needed to compute the summed end-to-end time
             lp.writeObjectiveEquation()
             
             # Call the LP solver
@@ -257,7 +236,7 @@ def lpScheduler(system):
     return lastFeasibleSchedule
 
 def parseLpResults(lp, results):
-    delayResults = {solutionVariable: solutionValue for solutionVariable, solutionValue in results.items() if "DELAY_" in solutionVariable}
+    delayResults = {solutionVariable: solutionValue for solutionVariable, solutionValue in results.items() if "delay_" in solutionVariable}
     
     # Get the max delay of each task dependency instance
     maxDependencyDelays = {}
