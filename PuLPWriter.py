@@ -130,7 +130,7 @@ class  PuLPWriter:
         return allTaskInstances
     
     # Equestion 3 for all task instances
-    def createTaskExecutionConstraints(self, allTaskInstances):
+    def createTaskExecutionConstraints(self, allTaskInstances, cores):
         self.writeComment("Make sure task executions do not overlap")
         # Add pairwise task constraints to make sure task executions do not overlap (single core)
         while bool(allTaskInstances):

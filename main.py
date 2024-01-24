@@ -175,7 +175,10 @@ def lpScheduler(system):
             
             # Equestion 3
             # Create constraints that ensures no two tasks overlap (Single Core)
-            lp.createTaskExecutionConstraints(allTaskInstances.copy())
+            if (system.get("CoreStore") is not None):
+                lp.createTaskExecutionConstraints(allTaskInstances.copy(), system.get("CoreStore"))
+            else:
+                lp.createTaskExecutionConstraints(allTaskInstances.copy(), [{'name': 'c1', 'speedup': 1}]) #needed for old version of the exported file before multicore support
 
             # Equestion 4
             # A dependency instance is simply a pair of source and destination task instances
