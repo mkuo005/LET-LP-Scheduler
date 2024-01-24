@@ -183,6 +183,7 @@ def lpScheduler(system):
             # The selected source tasks must complete its execution before the destination task
             lp.createTaskDependencyConstraints(system, allTaskInstances)
 
+            # Tightening delays is only required if tasks are scheduled independently of other instances within the period
             if Config.individualLetInstanceParams:
                 lp.writeComment("Tighten dependency delays")
                 for delayVariable, delayValue in delayVariableUpperBounds.items():
@@ -221,7 +222,7 @@ def lpScheduler(system):
 
                 # Determine upper bounds needed to tighten the dependency delays in the next iteration 
                 delayVariablesToTighten = lp.dependencyInstanceDelayVariables[taskDependencyPair]
-                delayVariableUpperBounds = parseLpResults(lp, results)       
+                delayVariableUpperBounds = tightenProblemSpace(lp, results)       
             print("--------")
                 
             # If all instances of a LET task share the same parameters, then no more improvements are possible.
@@ -235,7 +236,7 @@ def lpScheduler(system):
     print(f"Final summation of task dependency delays: {lastDelays} ns")
     return lastFeasibleSchedule
 
-def parseLpResults(lp, results):
+def tightenProblemSpace(lp, results):
     delayResults = {solutionVariable: solutionValue for solutionVariable, solutionValue in results.items() if "delay_" in solutionVariable}
     
     # Get the max delay of each task dependency instance
