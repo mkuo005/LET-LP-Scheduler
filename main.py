@@ -15,26 +15,20 @@ import argparse
 import re
 import json
 import math
+import pulp as pl
 from enum import Enum
 from types import SimpleNamespace
 
-# Import LpSolve constraint generator
-from LpSolveLPWriter import LpSolveLPWriter
 
-# Import Gurobi constraint generator
-from GurobiLPWriter import GurobiLPWriter
+# Import PuLP constraint generator
+from PuLPWriter import PuLPWriter
 
 # Tool configuration
 class Solver(Enum):
     NONE = 0
     GUROBI = 1
-    LPSOLVE = 2
+    PULP = 2
 
-SolverProg = [
-    "none",
-    "gurobi_cl",
-    "lp_solve"
-]
 
 Config = SimpleNamespace(
     hostName = "localhost",
@@ -45,7 +39,8 @@ Config = SimpleNamespace(
     exeSuffix = "",
     lpFile = "system.lp",
     objectiveVariable = "sumDependencyDelays",
-    individualLetInstanceParams = False  # Each instance of a LET task can have different parameters
+    individualLetInstanceParams = False,  # Each instance of a LET task can have different parameters
+    useOffSet = False # Enable task offset
 )
 
 # Web server to handle requests from the LetSyncrhonise LP plugin, 
@@ -117,7 +112,6 @@ class Server(BaseHTTPRequestHandler):
         self.do_POST();
 
 
-# FIXME: Refactor to generate LP information and then generate LP file in one go. 
 # LP Scheduler
 def lpScheduler(system):
     # Determine the hyper-period of the tasks
@@ -159,107 +153,56 @@ def lpScheduler(system):
         
         # List of LP constraint used to tighten the current dependency
         delayVariablesToTighten = []
+
+        # Last summation of task dependency delays
+        lastDelays = -1
+        
         while lookingForBetterSolution:
             print()
             print(f"Iteration {timesRan} ... {taskDependencyPair}")
             timesRan += 1
 
             # Create LP writer for the selected solver
-            if Config.solver == Solver.GUROBI: 
-                lp = GurobiLPWriter(Config.lpFile, Config.objectiveVariable, lpLargeConstant)
-            elif Config.solver == Solver.LPSOLVE:
-                lp = LpSolveLPWriter(Config.lpFile, Config.objectiveVariable, lpLargeConstant)
+            lp = PuLPWriter(Config.lpFile, Config.objectiveVariable, lpLargeConstant)
 
             # Create the objective to minimize task dependency delay
             lp.writeObjective()
 
-            # All task instances within the scheduling window
-            allTaskInstances = {}
-
+            # Equestion 2
             # Encode the task instances over the scheduling window as LP constraints
-            for task in system['TaskStore']:
-                # Get task parameters
-                taskName = task['name']
-                taskWcet = task['wcet']
-                taskPeriod = task['period']
-                
-                lp.writeComment(f"Task instance properties of {taskName}")
-                
-                # Create the task instances that appear inside the scheduling window
-                instances = []
-                for instanceStartTime in range(0, schedulingWindow, taskPeriod):
-                    # Task instance name includes an instance number
-                    instanceName = f"{taskName}_{len(instances)}"
-                    instances.append(instanceName)
-
-                    # Compute task instance end time
-                    instanceEndTime = instanceStartTime + taskPeriod
-                    
-                    # Encode the execution bounds of the task instance in LP constraints
-                    lp.writeTaskInstanceExecutionBounds(taskName, instanceName, instanceStartTime, instanceEndTime, taskWcet, Config.individualLetInstanceParams)
-                
-                allTaskInstances[taskName] = instances
+            # Return all task instances within the scheduling window
+            allTaskInstances = lp.createTaskInstancesAsConstraints(system, schedulingWindow, Config)
             
-            lp.writeComment("Make sure task executions do not overlap")
+            # Equestion 3
+            # Create constraints that ensures no two tasks overlap (Single Core)
+            lp.createTaskExecutionConstraints(allTaskInstances.copy())
 
-            # Add pairwise task constraints to make sure task executions do not overlap (single core)
-            allTaskInstancesCopy = allTaskInstances.copy()
-            while bool(allTaskInstancesCopy):
-                # Get all instances of that task
-                taskName, instances = allTaskInstancesCopy.popitem()
-                for instance in instances:
-                    for otherTaskName, otherInstances in allTaskInstancesCopy.items():
-                        for otherInstance in otherInstances:
-                            lp.writeTaskOverlapConstraint(instance, otherInstance)
+            # Equestion 4
+            # A dependency instance is simply a pair of source and destination task instances
+            # Each dependency instance can only have 1 source task but can have mutiple destinations
+            # The selected source tasks must complete its execution before the destination task
+            lp.createTaskDependencyConstraints(system, allTaskInstances)
+
+            # Tightening delays is only required if tasks are scheduled independently of other instances within the period
+            if Config.individualLetInstanceParams:
+                lp.writeComment("Tighten dependency delays")
+                for delayVariable, delayValue in delayVariableUpperBounds.items():
+                    # Add constraints to tighten the current dependency pair to find better solutions.
+                    lp.writeDelayConstraints(delayVariable, delayValue, delayVariable in delayVariablesToTighten)
             
-            lp.writeComment("Each destination task instance of a dependency can only be connected to one source")
-
-            # Constrain each dependency task instance to only have one source task instance
-            for dependency in system['DependencyStore']:
-                # Dependency parameters
-                name = dependency['name']
-                srcTask = dependency['source']['task']
-                destTask = dependency['destination']['task']
-                dependencyPair = f"{dependency['source']['task']}_{dependency['destination']['task']}"
-
-                # Dependencies to the environment are left unconstrained.
-                if "__system" in dependencyPair:
-                    continue
-
-                # Get source and destination task instances
-                srcTaskInstances = allTaskInstances[srcTask]
-                destTaskInstances = allTaskInstances[destTask]
-
-                lp.writeDependencySourceTaskSelectionConstraint(name, dependencyPair, srcTaskInstances, destTaskInstances)
-
-            # FIXME: Refactor into LP writers
-            lp.writeComment("Tighten dependency delays")
-            for delayVariable, delayValue in delayVariableUpperBounds.items():
-                # Add constraints to tighten the current dependency pair to find better solutions.
-                if (delayVariable in delayVariablesToTighten):
-                    constraint = f"{delayVariable} <= {delayValue - 1}"
-                else:
-                    constraint = f"{delayVariable} <= {delayValue}"
-                if Config.solver == Solver.GUROBI:
-                    lp.write(f"{constraint}\n")
-                elif Config.solver == Solver.LPSOLVE:
-                    lp.write(f"{constraint};\n")
-            
-            # Create objective equation
+            # Create objective equation has to be called after createTaskDependencyConstraints as the depenedency selection varaibles are needed to compute the summed end-to-end time
             lp.writeObjectiveEquation()
-
-            # Create boolean variable constraint
-            lp.writeBooleanConstraints()
-
-            lp.close()
-
-            # Call the LP solver
-            if Config.solver == Solver.GUROBI:
-                results = CallGurobi()
-            elif Config.solver == Solver.LPSOLVE:
-                results = CallLPSolve()
             
-            print()
+            # Call the LP solver
+            results = {}
+            if Config.solver == Solver.GUROBI:
+                lp.solve(pl.GUROBI())
+            elif Config.solver == Solver.PULP:
+                lp.solve(None) # uses the default PuLP solver
+            if (lp.prob.status == 1): 
+                for v in lp.prob.variables():
+                    results[str(v.name)] = v.varValue
+
             print("Results:")
             if len(results) == 0 :
                 # If there are no results, then the problem is infeasible
@@ -273,13 +216,13 @@ def lpScheduler(system):
                 # Problem is feasible
                 print("LetSynchronise system is schedulable")
                 print(f"Current summation of task dependency delays: {results[Config.objectiveVariable]} ns")
-                
+                lastDelays = results[Config.objectiveVariable]
                 # Create the task schedule that is encoded in the LP solution
                 lastFeasibleSchedule = exportSchedule(system, lp, allTaskInstances, results)
 
                 # Determine upper bounds needed to tighten the dependency delays in the next iteration 
                 delayVariablesToTighten = lp.dependencyInstanceDelayVariables[taskDependencyPair]
-                delayVariableUpperBounds = parseLpResults(lp, results)       
+                delayVariableUpperBounds = tightenProblemSpace(lp, results)       
             print("--------")
                 
             # If all instances of a LET task share the same parameters, then no more improvements are possible.
@@ -290,10 +233,11 @@ def lpScheduler(system):
             break
             
     print(f"Iterated a total of {timesRan} times")
+    print(f"Final summation of task dependency delays: {lastDelays} ns")
     return lastFeasibleSchedule
 
-def parseLpResults(lp, results):
-    delayResults = {solutionVariable: solutionValue for solutionVariable, solutionValue in results.items() if "DELAY_" in solutionVariable}
+def tightenProblemSpace(lp, results):
+    delayResults = {solutionVariable: solutionValue for solutionVariable, solutionValue in results.items() if "delay_" in solutionVariable}
     
     # Get the max delay of each task dependency instance
     maxDependencyDelays = {}
@@ -352,30 +296,7 @@ def exportSchedule(system, lp, allTaskInstances, results):
         schedule['TaskInstancesStore'].append(taskInstancesJson)
     return schedule
 
-# Call Gurobi and parse the result
-def CallGurobi():
-    results = {}
-    with subprocess.Popen([Config.solverProg, "ResultFile=gurobiresult.sol", Config.lpFile], stdout=subprocess.PIPE) as proc:
-        output = proc.stdout.read().decode("utf-8")
-        if not "Model is infeasible" in output:
-            data = open("gurobiresult.sol", "r").read()
-            lines = filter(lambda line: len(line) != 0, data.splitlines())
-            for line in lines:
-                fragment = re.split('\s+', line)
-                results[fragment[0]] = fragment[1] # Create dictionary of variables and their solutions
-    return results
 
-# Call LpSolve and parse the result
-def CallLPSolve():
-    results = {}
-    with subprocess.Popen([Config.solverProg, Config.lpFile, '-ip'], stdout=subprocess.PIPE) as proc:
-        output = proc.stdout.read().decode("utf-8")
-        if not "This problem is infeasible" in output:
-            lines = filter(lambda line: len(line) != 0, output.splitlines())
-            for line in lines:
-                fragment = re.split('\s+', line)
-                results[fragment[0]] = fragment[1]  # Create dictionary of variables and their solutions
-    return results
 
 
 if __name__ == '__main__':
@@ -383,7 +304,7 @@ if __name__ == '__main__':
     print("----------------")
     parser = argparse.ArgumentParser()
     parser.add_argument("--file", type=str, default="")
-    parser.add_argument("--solver", choices=["gurobi", "lpsolve"], type=str, required=True)
+    parser.add_argument("--solver", choices=["gurobi", "pulp"], type=str, required=True)
     args = parser.parse_args()
     
    # Set the OS and executable file suffix
@@ -392,13 +313,11 @@ if __name__ == '__main__':
         Config.exeSuffix = ".exe"
     
     # Set the LP solver
-    if args.solver == "lpsolve":
-        Config.solver = Solver.LPSOLVE
-        Config.solverProg = SolverProg[Solver.LPSOLVE.value] + Config.exeSuffix
-    elif args.solver == "gurobi":
+    if args.solver == "gurobi":
         Config.solver = Solver.GUROBI
-        Config.solverProg = SolverProg[Solver.GUROBI.value]
-    print(f"Solver: {Config.solverProg}")
+    elif args.solver == "pulp":
+        Config.solver = Solver.PULP
+    print(f"Solver: {Config.solver}")
 
     # Specify a LET system model file and create a schedule, or run in webserver mode for the LetSynchronise plugin.
     if len(args.file) > 0:
@@ -410,6 +329,7 @@ if __name__ == '__main__':
             scheduleFile = open("schedule.json", "w+")
             scheduleFile.write(json.dumps(schedule, indent=2))
             scheduleFile.close()
+            
         except FileNotFoundError as e:
             print(f"Unable to open \"{args.file}\"!")
             print(e)
