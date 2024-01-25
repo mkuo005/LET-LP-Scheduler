@@ -2,128 +2,171 @@
   "TaskInstancesStore": [
     {
       "name": "task_a",
+      "initialOffset": -0.0,
       "value": [
         {
           "instance": 0,
           "periodStartTime": 0,
-          "letStartTime": 1000000,
-          "letEndTime": 1500000,
+          "letStartTime": 1399999,
+          "letEndTime": 2899999,
           "periodEndTime": 3000000,
-          "executionTime": 500000,
+          "executionTime": 1500000,
           "executionIntervals": [
             {
-              "startTime": 1000000,
-              "endTime": 1500000
+              "startTime": 1399999,
+              "endTime": 2899999,
+              "core": "c2"
             }
-          ]
+          ],
+          "currentCore": {
+            "name": "c2",
+            "speedup": 1
+          }
         },
         {
           "instance": 1,
           "periodStartTime": 3000000,
-          "letStartTime": 4000000,
-          "letEndTime": 4500000,
+          "letStartTime": 4399999,
+          "letEndTime": 5899999,
           "periodEndTime": 6000000,
-          "executionTime": 500000,
+          "executionTime": 1500000,
           "executionIntervals": [
             {
-              "startTime": 4000000,
-              "endTime": 4500000
+              "startTime": 4399999,
+              "endTime": 5899999,
+              "core": "c2"
             }
-          ]
+          ],
+          "currentCore": {
+            "name": "c2",
+            "speedup": 1
+          }
         }
       ]
     },
     {
       "name": "task_b",
+      "initialOffset": 1999999.0,
       "value": [
         {
           "instance": 0,
           "periodStartTime": 0,
-          "letStartTime": 1500000,
-          "letEndTime": 1900000,
+          "letStartTime": 1999999,
+          "letEndTime": 2899999,
           "periodEndTime": 2000000,
-          "executionTime": 400000,
+          "executionTime": 900000,
           "executionIntervals": [
             {
-              "startTime": 1500000,
-              "endTime": 1900000
+              "startTime": 1999999,
+              "endTime": 2899999,
+              "core": "c1"
             }
-          ]
+          ],
+          "currentCore": {
+            "name": "c1",
+            "speedup": 1
+          }
         },
         {
           "instance": 1,
           "periodStartTime": 2000000,
-          "letStartTime": 3500000,
-          "letEndTime": 3900000,
+          "letStartTime": 3999999,
+          "letEndTime": 4899999,
           "periodEndTime": 4000000,
-          "executionTime": 400000,
+          "executionTime": 900000,
           "executionIntervals": [
             {
-              "startTime": 3500000,
-              "endTime": 3900000
+              "startTime": 3999999,
+              "endTime": 4899999,
+              "core": "c1"
             }
-          ]
+          ],
+          "currentCore": {
+            "name": "c1",
+            "speedup": 1
+          }
         },
         {
           "instance": 2,
           "periodStartTime": 4000000,
-          "letStartTime": 5500000,
-          "letEndTime": 5900000,
+          "letStartTime": 5999999,
+          "letEndTime": 6899999,
           "periodEndTime": 6000000,
-          "executionTime": 400000,
+          "executionTime": 900000,
           "executionIntervals": [
             {
-              "startTime": 5500000,
-              "endTime": 5900000
+              "startTime": 5999999,
+              "endTime": 6899999,
+              "core": "c1"
             }
-          ]
+          ],
+          "currentCore": {
+            "name": "c1",
+            "speedup": 1
+          }
         }
       ]
     },
     {
       "name": "task_c",
+      "initialOffset": 1899999.0,
       "value": [
         {
           "instance": 0,
           "periodStartTime": 0,
-          "letStartTime": 1900000,
-          "letEndTime": 2000000,
+          "letStartTime": 2899999,
+          "letEndTime": 3899999,
           "periodEndTime": 2000000,
-          "executionTime": 100000,
+          "executionTime": 1000000,
           "executionIntervals": [
             {
-              "startTime": 1900000,
-              "endTime": 2000000
+              "startTime": 2899999,
+              "endTime": 3899999,
+              "core": "c2"
             }
-          ]
+          ],
+          "currentCore": {
+            "name": "c2",
+            "speedup": 1
+          }
         },
         {
           "instance": 1,
           "periodStartTime": 2000000,
-          "letStartTime": 3900000,
-          "letEndTime": 4000000,
+          "letStartTime": 4899999,
+          "letEndTime": 5899999,
           "periodEndTime": 4000000,
-          "executionTime": 100000,
+          "executionTime": 1000000,
           "executionIntervals": [
             {
-              "startTime": 3900000,
-              "endTime": 4000000
+              "startTime": 4899999,
+              "endTime": 5899999,
+              "core": "c1"
             }
-          ]
+          ],
+          "currentCore": {
+            "name": "c1",
+            "speedup": 1
+          }
         },
         {
           "instance": 2,
           "periodStartTime": 4000000,
-          "letStartTime": 5900000,
-          "letEndTime": 6000000,
+          "letStartTime": 6899999,
+          "letEndTime": 7899999,
           "periodEndTime": 6000000,
-          "executionTime": 100000,
+          "executionTime": 1000000,
           "executionIntervals": [
             {
-              "startTime": 5900000,
-              "endTime": 6000000
+              "startTime": 6899999,
+              "endTime": 7899999,
+              "core": "c1"
             }
-          ]
+          ],
+          "currentCore": {
+            "name": "c1",
+            "speedup": 1
+          }
         }
       ]
     }

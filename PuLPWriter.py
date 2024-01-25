@@ -31,11 +31,35 @@ class  PuLPWriter:
         #print([self.getIntVar(x) for v in self.dependencyInstanceDelayVariables.values() for x in v])
         self.prob += self.objectiveVariable == pl.lpSum([self.getIntVar(x) for v in self.dependencyInstanceDelayVariables.values() for x in v])
 
+    def taskOffset(self, taskInstance):
+        return f"{taskInstance}_offset"
+    
+    def taskInstDelay(self, srcTaskIns, destTaskIns):
+        return f"delay_{srcTaskIns}_{destTaskIns}"
+    
     def taskInstStartTime(self, taskInstance):
-        return f"U{taskInstance}_start_time"
+        return f"{taskInstance}_start_time"
     
     def taskInstEndTime(self, taskInstance):
-        return f"U{taskInstance}_end_time"
+        return f"{taskInstance}_end_time"
+    
+    def taskInstPeriodStartTime(self, taskInstance):
+        return f"{taskInstance}_period_start_time"
+    
+    def taskInstPeriodEndTime(self, taskInstance):
+        return f"{taskInstance}_period_end_time"
+    
+    def taskInstExecutionControl(self, srcTaskIns, destTaskIns):
+        return f"{srcTaskIns}_{destTaskIns}_execution_control"
+    
+    def depInst(self, srcTaskIns, destTaskIns):
+        return f"{srcTaskIns}_{destTaskIns}_dep"
+    
+    def instLink(self, srcTaskIns, destTaskIns):
+        return f"{srcTaskIns}_{destTaskIns}"
+    
+    def instVarName(self, taskName, insName): 
+        return f"{taskName}_{insName}"
     
     def getIntVar(self, name):
         if (name in self.vars) == False:
@@ -67,14 +91,14 @@ class  PuLPWriter:
             # instancePeriodStartTime is 𝑖 × 𝑡.𝑝
             for instancePeriodStartTime in range(0, schedulingWindow, taskPeriod):
                 # Task instance name includes an instance number
-                instanceName = f"{taskName}_{len(instances)}"
+                instanceName = self.instVarName(taskName, len(instances))
                 instances.append(instanceName)
                 
-                instancePeriodStartTimeVar = self.getIntVar(instanceName+"_period_start_time")
+                instancePeriodStartTimeVar = self.getIntVar(self.taskInstPeriodStartTime(instanceName))
 
                 # introduce solution space where t.o is equal to or larger than 0
                 if Config.useOffSet:
-                    taskOffsetVar = self.getIntVar(taskName+"_offset")
+                    taskOffsetVar = self.getIntVar(self.taskOffset(taskName))
                     self.prob += instancePeriodStartTimeVar == instancePeriodStartTime + taskOffsetVar
                     self.prob += taskOffsetVar >= 0  # tasks offset must be positive
                     self.prob += taskOffsetVar <= taskPeriod - 1 # tasks can be offset atmost 1 less than period
@@ -82,7 +106,7 @@ class  PuLPWriter:
                     self.prob += instancePeriodStartTimeVar == instancePeriodStartTime
 
                 # Compute task instance end time
-                instancePeriodEndTimeVar = self.getIntVar(instanceName+"_period_end_time")
+                instancePeriodEndTimeVar = self.getIntVar(self.taskInstPeriodEndTime(instanceName))
                 self.prob += instancePeriodEndTimeVar == instancePeriodStartTimeVar + taskPeriod
      
                 
@@ -140,10 +164,46 @@ class  PuLPWriter:
             for instance in instances:
                 for otherTaskName, otherInstances in allTaskInstances.items():
                     for otherInstance in otherInstances:
-                        self.writeTaskOverlapConstraint(instance, otherInstance)
+                        self.writeTaskOverlapConstraint(instance, otherInstance, cores)
 
-    def writeTaskOverlapConstraint(self, currentTaskInst, otherTaskInst):
-        controlVariable = self.getBoolVar("execution_control_"+currentTaskInst+"_"+otherTaskInst)
+    def taskInstCoreAllocation(self, task, coreName):
+        return f"{task}_{coreName}_core"
+
+    def taskInstCorePairsAllocation(self, srcTask, srcCoreName, destTask, destCoreName):
+        return f"{srcTask}_{srcCoreName}_{destTask}_{destCoreName}_pair"
+    
+    def writeTaskOverlapConstraint(self, currentTaskInst, otherTaskInst, cores):
+        currentTaskAllocations = list()
+        otherTaskAllocations = list()
+        taskAllocationPairs = list()
+        taskAllocationExclusivePairs = list()
+
+        for c in cores:
+            currentTaskCoreAllocationVariable = self.getBoolVar(self.taskInstCoreAllocation(currentTaskInst,c["name"]))
+            currentTaskAllocations.append(currentTaskCoreAllocationVariable)
+            otherTaskCoreAllocationVariable = self.getBoolVar(self.taskInstCoreAllocation(otherTaskInst,c["name"]))
+            otherTaskAllocations.append(otherTaskCoreAllocationVariable)
+
+        for srcCore in cores:
+            for destCore in cores:
+                currentTaskCoreAllocationVariable = self.getBoolVar(self.taskInstCoreAllocation(currentTaskInst,srcCore["name"]))
+                otherTaskCoreAllocationVariable = self.getBoolVar(self.taskInstCoreAllocation(otherTaskInst,destCore["name"]))
+
+                pairTaskCoreAllocationVariable = self.getBoolVar(self.taskInstCorePairsAllocation(currentTaskInst,srcCore["name"],otherTaskInst,destCore["name"]))
+                taskAllocationPairs.append(pairTaskCoreAllocationVariable)
+
+                #if this pair has been allocated naturally the task allocation must also be allocated
+                self.prob += pairTaskCoreAllocationVariable <= currentTaskCoreAllocationVariable
+                self.prob += pairTaskCoreAllocationVariable <= otherTaskCoreAllocationVariable
+                if not (srcCore["name"] == destCore["name"]):
+                    taskAllocationExclusivePairs.append(pairTaskCoreAllocationVariable)
+
+        # Task instances must only be allocated to a single core
+        self.prob += pl.lpSum(currentTaskAllocations) == 1 #only 1 core can be selected
+        self.prob += pl.lpSum(otherTaskAllocations) == 1 #only 1 core can be selected
+        self.prob += pl.lpSum(taskAllocationPairs) == 1 #only 1 pair can be selected
+
+        controlVariable = self.getBoolVar(self.taskInstExecutionControl(currentTaskInst,otherTaskInst))
         currentTaskInstStartTime = self.getIntVar(self.taskInstStartTime(currentTaskInst))
         currentTaskInstEndTime  = self.getIntVar(self.taskInstEndTime(currentTaskInst))
         otherTaskInstStartTime = self.getIntVar(self.taskInstStartTime(otherTaskInst))
@@ -152,10 +212,10 @@ class  PuLPWriter:
         # Equation 3a and Equation 3b
 
         # 𝑡𝑖𝑥.𝑒 − 𝑡𝑗𝑦.𝑠 ≤ N × 𝑏𝑡𝑎𝑠𝑘𝑥,𝑖,𝑦,𝑗
-        self.prob += currentTaskInstEndTime - otherTaskInstStartTime <= self.lpLargeConstant * controlVariable
+        self.prob += currentTaskInstEndTime - otherTaskInstStartTime <= self.lpLargeConstant * controlVariable + pl.lpSum([x * self.lpLargeConstant for x in taskAllocationExclusivePairs])
 
         #𝑡𝑗𝑦.𝑒 − 𝑡𝑖𝑥.𝑠 ≤ N − N × 𝑏𝑡𝑎𝑠𝑘𝑥,𝑖,𝑦,
-        self.prob += otherTaskInstEndTime - currentTaskInstStartTime <= self.lpLargeConstant - self.lpLargeConstant * controlVariable
+        self.prob += otherTaskInstEndTime - currentTaskInstStartTime <= self.lpLargeConstant - self.lpLargeConstant * controlVariable + pl.lpSum([x * self.lpLargeConstant for x in taskAllocationExclusivePairs])
     
     # Equation 4
     # A dependency instance is simply a pair of source and destination task instances
@@ -171,7 +231,7 @@ class  PuLPWriter:
             name = dependency['name']
             srcTask = dependency['source']['task']
             destTask = dependency['destination']['task']
-            dependencyPair = f"{dependency['source']['task']}_{dependency['destination']['task']}"
+            dependencyPair = self.instLink(dependency['source']['task'],dependency['destination']['task'])
 
             # Dependencies to the environment are left unconstrained.
             if "__system" in dependencyPair:
@@ -199,8 +259,8 @@ class  PuLPWriter:
                 srcTaskInstStartTimeVar = self.getIntVar(self.taskInstStartTime(srcInst))
                 srcTaskInstEndTimeVar = self.getIntVar(self.taskInstEndTime(srcInst))
                 # Name for task dependency instance and its boolean control variable.
-                dependencyInstance = f"{srcInst}_{destInst}"
-                dependencyInstanceControlVariable = self.getBoolVar(f"dep_{dependencyInstance}")   
+           
+                dependencyInstanceControlVariable = self.getBoolVar(self.depInst(srcInst, destInst))   
 
                 srcInstControlVariables.append(dependencyInstanceControlVariable)
 
@@ -213,7 +273,7 @@ class  PuLPWriter:
                 
                 # Calculate the delay of the dependency instance.
                 # Equestion 5
-                dependencyInstanceDelayVar = self.getIntVar(f"delay_{dependencyInstance}")
+                dependencyInstanceDelayVar = self.getIntVar(self.taskInstDelay(srcInst, destInst))
                 # Equestion 5a
                 self.prob += dependencyInstanceDelayVar >= 0
                 # Equestion 5b and 5c

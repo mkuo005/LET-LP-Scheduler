@@ -40,7 +40,7 @@ Config = SimpleNamespace(
     lpFile = "system.lp",
     objectiveVariable = "sumDependencyDelays",
     individualLetInstanceParams = False,  # Each instance of a LET task can have different parameters
-    useOffSet = False # Enable task offset
+    useOffSet = True # Enable task offset
 )
 
 # Web server to handle requests from the LetSyncrhonise LP plugin, 
@@ -175,10 +175,10 @@ def lpScheduler(system):
             
             # Equestion 3
             # Create constraints that ensures no two tasks overlap (Single Core)
-            if (system.get("CoreStore") is not None):
-                lp.createTaskExecutionConstraints(allTaskInstances.copy(), system.get("CoreStore"))
-            else:
-                lp.createTaskExecutionConstraints(allTaskInstances.copy(), [{'name': 'c1', 'speedup': 1}]) #needed for old version of the exported file before multicore support
+            if (system.get("CoreStore") is None):
+                system["CoreStore"] = [{'name': 'c1', 'speedup': 1}] #needed for old version of the exported file before multicore support
+            lp.createTaskExecutionConstraints(allTaskInstances.copy(), system.get("CoreStore"))
+
 
             # Equestion 4
             # A dependency instance is simply a pair of source and destination task instances
@@ -269,6 +269,7 @@ def exportSchedule(system, lp, allTaskInstances, results):
         
         taskInstancesJson = {
             "name": task['name'],
+            "initialOffset": float(results[lp.taskOffset(task['name'])]), #FIXME: when is this used in the GUI ?
             "value": []
         }
         
@@ -283,6 +284,12 @@ def exportSchedule(system, lp, allTaskInstances, results):
             period = int(task['period'])
             wcet = int(task['wcet'])
             
+            allocatedCore = None
+            for c in system["CoreStore"]:
+                if results[lp.taskInstCoreAllocation(lp.instVarName(task['name'],index), c["name"])] == 1:
+                    allocatedCore = c
+                    break
+
             taskInstance = {
                 "instance" : index,
                 "periodStartTime" : index * period,
@@ -292,8 +299,10 @@ def exportSchedule(system, lp, allTaskInstances, results):
                 "executionTime": task['wcet'],
                 "executionIntervals": [ {
                     "startTime": startTime,
-                    "endTime": startTime + wcet
-                } ]
+                    "endTime": startTime + wcet,
+                    "core" : allocatedCore["name"]
+                } ],
+                "currentCore": allocatedCore
             }
             taskInstancesJson['value'].append(taskInstance)
         schedule['TaskInstancesStore'].append(taskInstancesJson)
