@@ -1,6 +1,13 @@
 """
 This program converts a LetSyncrhonise system model into a set of linear programming 
 constraints that can be solved to minimise the delays of task dependencies.
+
+See the following paper for the original ILP formulation:
+E. Yip and M. M. Y. Kuo. LetSynchronise: An Open-Source Framework for Analysing and 
+Optimising Logical Execution Time Systems. CPS-IoT Week, 2023. Available online at
+https://dl.acm.org/doi/10.1145/3576914.3587500
+
+The formulation in this implementation supports multicores as well.
 """
 
 # Import web server libraries
@@ -144,6 +151,9 @@ def lpScheduler(system):
 
     # Track the number of iterations to find solution    
     timesRan = 0
+    
+    # Last summation of task dependency delays
+    lastDelays = -1
 
     # FIXME: Why do we even need to iterate?
     # Iterate through each dependency and try to tighten the task dependency delays
@@ -154,8 +164,6 @@ def lpScheduler(system):
         # List of LP constraint used to tighten the current dependency
         delayVariablesToTighten = []
 
-        # Last summation of task dependency delays
-        lastDelays = -1
         
         while lookingForBetterSolution:
             print()
@@ -168,19 +176,19 @@ def lpScheduler(system):
             # Create the objective to minimize task dependency delay
             lp.writeObjective()
 
-            # Equestion 2
+            # Equation 2
             # Encode the task instances over the scheduling window as LP constraints
             # Return all task instances within the scheduling window
             allTaskInstances = lp.createTaskInstancesAsConstraints(system, schedulingWindow, Config)
             
-            # Equestion 3
+            # Equation 3
             # Create constraints that ensures no two tasks overlap (Single Core)
             if (system.get("CoreStore") is None):
                 system["CoreStore"] = [{'name': 'c1', 'speedup': 1}] #needed for old version of the exported file before multicore support
             lp.createTaskExecutionConstraints(allTaskInstances.copy(), system.get("CoreStore"))
 
 
-            # Equestion 4
+            # Equations 4 and 5
             # A dependency instance is simply a pair of source and destination task instances
             # Each dependency instance can only have 1 source task but can have mutiple destinations
             # The selected source tasks must complete its execution before the destination task
@@ -193,6 +201,7 @@ def lpScheduler(system):
                     # Add constraints to tighten the current dependency pair to find better solutions.
                     lp.writeDelayConstraints(delayVariable, delayValue, delayVariable in delayVariablesToTighten)
             
+            # Equation 6
             # Create objective equation has to be called after createTaskDependencyConstraints as the depenedency selection varaibles are needed to compute the summed end-to-end time
             lp.writeObjectiveEquation()
             

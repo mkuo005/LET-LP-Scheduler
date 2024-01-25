@@ -153,7 +153,7 @@ class  PuLPWriter:
             allTaskInstances[taskName] = instances
         return allTaskInstances
     
-    # Equestion 3 for all task instances
+    # Equation 3 for all task instances
     def createTaskExecutionConstraints(self, allTaskInstances, cores):
         self.writeComment("Make sure task executions do not overlap")
         # Add pairwise task constraints to make sure task executions do not overlap (single core)
@@ -267,16 +267,17 @@ class  PuLPWriter:
                 # Task dependency is valid only when the source task does not end after the start of the destination task.
                 # dependencyInstanceControlVariable is set to 1 if this is the case.
                 # Equation 4a: 𝑡𝑖𝑥.𝑒 − 𝑡𝑗𝑦.𝑠 ≤ N − N × 𝑏𝑑𝑒𝑝 𝑥,𝑖,𝑦, 𝑗
-                # [ Source Task ]
-                #                 [ Dest Task ]
+                # [ Source Task ]-.
+                #                  \
+                #                   `->[ Dest Task ]
                 self.prob += srcTaskInstEndTimeVar - destTaskInstStartTimeVar <= self.lpLargeConstant - self.lpLargeConstant * dependencyInstanceControlVariable 
                 
                 # Calculate the delay of the dependency instance.
-                # Equestion 5
+                # Equation 5
                 dependencyInstanceDelayVar = self.getIntVar(self.taskInstDelay(srcInst, destInst))
-                # Equestion 5a
+                # Equation 5a
                 self.prob += dependencyInstanceDelayVar >= 0
-                # Equestion 5b and 5c
+                # Equations 5b and 5c
                 # if selected then:
                     # end-to-end delay for the dependency must be = to destaskInstEndTimeVar - srcTaskInstStartTimeVar
                     # destaskInstEndTimeVar must be after srcTaskInstStartTimeVar so that the difference is >= 0
@@ -284,7 +285,7 @@ class  PuLPWriter:
                     # it is always larger than a very large negative number i.e., any value >= 0
                     # it is always smaller than a very large number i.e., any value < lpLargeConstant but 0 will be choosen as the objective is to mininise
                 self.prob += dependencyInstanceDelayVar >= destTaskInstEndTimeVar - srcTaskInstStartTimeVar - self.lpLargeConstant + self.lpLargeConstant * dependencyInstanceControlVariable  
-                # Equestion 5c
+                # Equation 5c
                 
                 self.prob += dependencyInstanceDelayVar <= destTaskInstEndTimeVar - srcTaskInstStartTimeVar + self.lpLargeConstant - self.lpLargeConstant * dependencyInstanceControlVariable 
                
@@ -292,7 +293,7 @@ class  PuLPWriter:
                 self.dependencyInstanceDelayVariables[taskDependencyPair].append(dependencyInstanceDelayVar.name)     
     
             # Create the constraint where all possible dependency instances sum to 1, i.e., only one instance is selected
-            # Equestion 4b: Σ︁ 𝑏𝑑𝑒𝑝 = 1
+            # Equation 4b: Σ︁ 𝑏𝑑𝑒𝑝 = 1
             self.prob += pl.lpSum(srcInstControlVariables) == 1
 
 
