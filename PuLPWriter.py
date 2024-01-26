@@ -167,10 +167,10 @@ class  PuLPWriter:
                         self.writeTaskOverlapConstraint(instance, otherInstance, cores)
 
     def taskInstCoreAllocation(self, task, coreName):
-        return f"{task}_{coreName}_core"
+        return f"core_{task}_{coreName}"
 
     def taskInstCorePairsAllocation(self, srcTask, srcCoreName, destTask, destCoreName):
-        return f"{srcTask}_{srcCoreName}_{destTask}_{destCoreName}_pair"
+        return f"pair_{srcTask}_{srcCoreName}_{destTask}_{destCoreName}"
     
     def writeTaskOverlapConstraint(self, currentTaskInst, otherTaskInst, cores):
         currentTaskAllocations = list()

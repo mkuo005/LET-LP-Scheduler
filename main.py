@@ -100,7 +100,11 @@ class Server(BaseHTTPRequestHandler):
             return
         
         try:
+            inputFile = open("input_system.json", "w+")
+            inputFile.write(json.dumps(system, indent=2))
+            inputFile.close()
             schedule = lpScheduler(system)
+            
             if schedule == None:
                 raise Exception("LetSynchronise system is unschedulable!")
         except FileNotFoundError as error:
@@ -183,7 +187,7 @@ def lpScheduler(system):
             
             # Equation 3
             # Create constraints that ensures no two tasks overlap (Single Core)
-            if (system.get("CoreStore") is None):
+            if (system.get("CoreStore") is None or len(system.get("CoreStore")) ==0 ):
                 system["CoreStore"] = [{'name': 'c1', 'speedup': 1}] #needed for old version of the exported file before multicore support
             lp.createTaskExecutionConstraints(allTaskInstances.copy(), system.get("CoreStore"))
 
@@ -230,7 +234,7 @@ def lpScheduler(system):
                 print(f"Current summation of task dependency delays: {results[Config.objectiveVariable]} ns")
                 lastDelays = results[Config.objectiveVariable]
                 # Create the task schedule that is encoded in the LP solution
-                lastFeasibleSchedule = exportSchedule(system, lp, allTaskInstances, results)
+                lastFeasibleSchedule = exportSchedule(system, lp, allTaskInstances, results, Config)
 
                 # Determine upper bounds needed to tighten the dependency delays in the next iteration 
                 delayVariablesToTighten = lp.dependencyInstanceDelayVariables[taskDependencyPair]
@@ -267,7 +271,7 @@ def tightenProblemSpace(lp, results):
     
     return delayVariableUpperBounds
 
-def exportSchedule(system, lp, allTaskInstances, results):
+def exportSchedule(system, lp, allTaskInstances, results, Config):
     schedule = {
         "TaskInstancesStore" : []
     }
@@ -275,10 +279,13 @@ def exportSchedule(system, lp, allTaskInstances, results):
     for task in system['TaskStore']:
         if (task['name'] == "__system"):
             continue
-        
+        initialOffset = 0
+        if Config.useOffSet:
+            initialOffset = float(results[lp.taskOffset(task['name'])])
+            
         taskInstancesJson = {
             "name": task['name'],
-            "initialOffset": float(results[lp.taskOffset(task['name'])]), #FIXME: when is this used in the GUI ?
+            "initialOffset": initialOffset, #FIXME: when is this used in the GUI ?
             "value": []
         }
         
