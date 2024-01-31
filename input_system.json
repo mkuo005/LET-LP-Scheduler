@@ -6,7 +6,7 @@
     },
     {
       "name": "c2",
-      "speedup": 2
+      "speedup": 1
     }
   ],
   "SystemInputStore": [

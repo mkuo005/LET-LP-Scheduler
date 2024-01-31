@@ -163,7 +163,7 @@ class  PuLPWriter:
         return allTaskInstances
     
     # Equation 3 for all task instances
-    def createTaskExecutionConstraints(self, allTaskInstances, cores):
+    def createTaskExecutionConstraints(self, allTaskInstances, cores, Config):
         self.writeComment("Make sure task executions do not overlap")
         for taskInstances in allTaskInstances.values():
             for instance in taskInstances:
@@ -173,7 +173,13 @@ class  PuLPWriter:
                     currentTaskAllocations.append(currentTaskCoreAllocationVariable)
                 # Task instances must only be allocated to a single core
                 self.prob += pl.lpSum(currentTaskAllocations) == 1 #only 1 core can be selected
-
+        if Config.restrictTaskInstancesToSameCore:
+            for c in cores:
+                for taskName, taskInstances in allTaskInstances.items():
+                    taskCoreAllocationVariable = self.getBoolVar(self.taskInstCoreAllocation(taskName,c["name"]))
+                    for instance in taskInstances:
+                        currentTaskCoreAllocationVariable = self.getBoolVar(self.taskInstCoreAllocation(instance,c["name"]))
+                        self.prob += taskCoreAllocationVariable == currentTaskCoreAllocationVariable, "restrict_"+c["name"]+"_"+taskName+"_"+instance
         # Add pairwise task constraints to make sure task executions do not overlap (single core)
         while bool(allTaskInstances):
             # Get all instances of all tasks

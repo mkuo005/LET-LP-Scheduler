@@ -7,14 +7,14 @@
         {
           "instance": 0,
           "periodStartTime": 0,
-          "letStartTime": 0,
-          "letEndTime": 1500000,
+          "letStartTime": 1499999,
+          "letEndTime": 2999999,
           "periodEndTime": 3000000,
           "executionTime": 1500000,
           "executionIntervals": [
             {
-              "startTime": 0,
-              "endTime": 1500000,
+              "startTime": 1499999,
+              "endTime": 2999999,
               "core": "c2"
             }
           ],
@@ -26,14 +26,14 @@
         {
           "instance": 1,
           "periodStartTime": 3000000,
-          "letStartTime": 3000000,
-          "letEndTime": 4500000,
+          "letStartTime": 4499999,
+          "letEndTime": 5999999,
           "periodEndTime": 6000000,
           "executionTime": 1500000,
           "executionIntervals": [
             {
-              "startTime": 3000000,
-              "endTime": 4500000,
+              "startTime": 4499999,
+              "endTime": 5999999,
               "core": "c2"
             }
           ],
@@ -46,19 +46,19 @@
     },
     {
       "name": "task_b",
-      "initialOffset": 0.0,
+      "initialOffset": 999999.0,
       "value": [
         {
           "instance": 0,
           "periodStartTime": 0,
-          "letStartTime": 600000,
-          "letEndTime": 1500000,
+          "letStartTime": 2099999,
+          "letEndTime": 2999999,
           "periodEndTime": 2000000,
           "executionTime": 900000,
           "executionIntervals": [
             {
-              "startTime": 600000,
-              "endTime": 1500000,
+              "startTime": 2099999,
+              "endTime": 2999999,
               "core": "c1"
             }
           ],
@@ -70,14 +70,14 @@
         {
           "instance": 1,
           "periodStartTime": 2000000,
-          "letStartTime": 2600000,
-          "letEndTime": 3500000,
+          "letStartTime": 4099999,
+          "letEndTime": 4999999,
           "periodEndTime": 4000000,
           "executionTime": 900000,
           "executionIntervals": [
             {
-              "startTime": 2600000,
-              "endTime": 3500000,
+              "startTime": 4099999,
+              "endTime": 4999999,
               "core": "c1"
             }
           ],
@@ -89,19 +89,19 @@
         {
           "instance": 2,
           "periodStartTime": 4000000,
-          "letStartTime": 4600000,
-          "letEndTime": 5500000,
+          "letStartTime": 6099999,
+          "letEndTime": 6999999,
           "periodEndTime": 6000000,
           "executionTime": 900000,
           "executionIntervals": [
             {
-              "startTime": 4600000,
-              "endTime": 5500000,
-              "core": "c2"
+              "startTime": 6099999,
+              "endTime": 6999999,
+              "core": "c1"
             }
           ],
           "currentCore": {
-            "name": "c2",
+            "name": "c1",
             "speedup": 1
           }
         }
@@ -109,38 +109,38 @@
     },
     {
       "name": "task_c",
-      "initialOffset": 1500000.0,
+      "initialOffset": 1999999.0,
       "value": [
         {
           "instance": 0,
           "periodStartTime": 0,
-          "letStartTime": 1500000,
-          "letEndTime": 2500000,
+          "letStartTime": 2999999,
+          "letEndTime": 3999999,
           "periodEndTime": 2000000,
           "executionTime": 1000000,
           "executionIntervals": [
             {
-              "startTime": 1500000,
-              "endTime": 2500000,
-              "core": "c2"
+              "startTime": 2999999,
+              "endTime": 3999999,
+              "core": "c1"
             }
           ],
           "currentCore": {
-            "name": "c2",
+            "name": "c1",
             "speedup": 1
           }
         },
         {
           "instance": 1,
           "periodStartTime": 2000000,
-          "letStartTime": 3500000,
-          "letEndTime": 4500000,
+          "letStartTime": 4999999,
+          "letEndTime": 5999999,
           "periodEndTime": 4000000,
           "executionTime": 1000000,
           "executionIntervals": [
             {
-              "startTime": 3500000,
-              "endTime": 4500000,
+              "startTime": 4999999,
+              "endTime": 5999999,
               "core": "c1"
             }
           ],
@@ -152,14 +152,14 @@
         {
           "instance": 2,
           "periodStartTime": 4000000,
-          "letStartTime": 5500000,
-          "letEndTime": 6500000,
+          "letStartTime": 6999999,
+          "letEndTime": 7999999,
           "periodEndTime": 6000000,
           "executionTime": 1000000,
           "executionIntervals": [
             {
-              "startTime": 5500000,
-              "endTime": 6500000,
+              "startTime": 6999999,
+              "endTime": 7999999,
               "core": "c1"
             }
           ],

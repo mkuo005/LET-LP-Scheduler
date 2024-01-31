@@ -48,7 +48,8 @@ Config = SimpleNamespace(
     objectiveVariable = "sumDependencyDelays",
     individualLetInstanceParams = False,  # Each instance of a LET task can have different parameters
     useOffSet = True, # Enable task offset
-    useHeterogeneousCores = True
+    useHeterogeneousCores = True,
+    restrictTaskInstancesToSameCore = True,
 )
 
 # Web server to handle requests from the LetSyncrhonise LP plugin, 
@@ -190,7 +191,7 @@ def lpScheduler(system):
             
             # Equation 3
             # Create constraints that ensures no two tasks overlap (Single Core)
-            lp.createTaskExecutionConstraints(allTaskInstances.copy(), system.get("CoreStore"))
+            lp.createTaskExecutionConstraints(allTaskInstances.copy(), system.get("CoreStore"), Config)
 
 
             # Equations 4 and 5
