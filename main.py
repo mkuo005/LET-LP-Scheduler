@@ -47,7 +47,8 @@ Config = SimpleNamespace(
     lpFile = "system.lp",
     objectiveVariable = "sumDependencyDelays",
     individualLetInstanceParams = False,  # Each instance of a LET task can have different parameters
-    useOffSet = True # Enable task offset
+    useOffSet = True, # Enable task offset
+    useHeterogeneousCores = True
 )
 
 # Web server to handle requests from the LetSyncrhonise LP plugin, 
@@ -173,7 +174,9 @@ def lpScheduler(system):
             print()
             print(f"Iteration {timesRan} ... {taskDependencyPair}")
             timesRan += 1
-
+            if (system.get("CoreStore") is None or len(system.get("CoreStore")) ==0 ):
+                system["CoreStore"] = [{'name': 'c1', 'speedup': 1}] #needed for old version of the exported file before multicore support
+           
             # Create LP writer for the selected solver
             lp = PuLPWriter(Config.lpFile, Config.objectiveVariable, lpLargeConstant)
 
@@ -183,12 +186,10 @@ def lpScheduler(system):
             # Equation 2
             # Encode the task instances over the scheduling window as LP constraints
             # Return all task instances within the scheduling window
-            allTaskInstances = lp.createTaskInstancesAsConstraints(system, schedulingWindow, Config)
+            allTaskInstances = lp.createTaskInstancesAsConstraints(system, schedulingWindow, system.get("CoreStore"), Config)
             
             # Equation 3
             # Create constraints that ensures no two tasks overlap (Single Core)
-            if (system.get("CoreStore") is None or len(system.get("CoreStore")) ==0 ):
-                system["CoreStore"] = [{'name': 'c1', 'speedup': 1}] #needed for old version of the exported file before multicore support
             lp.createTaskExecutionConstraints(allTaskInstances.copy(), system.get("CoreStore"))
 
 

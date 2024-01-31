@@ -1,4 +1,5 @@
 import pulp as pl
+import math
 class  PuLPWriter:
     equations = [{}]
     
@@ -75,7 +76,7 @@ class  PuLPWriter:
     
     # Equation 2
     # Create constraints to compute task instance start and end times for each task instance (i) within the scheduling window
-    def createTaskInstancesAsConstraints(self, system, schedulingWindow, Config):
+    def createTaskInstancesAsConstraints(self, system, schedulingWindow, cores, Config):
         allTaskInstances = {}
         for task in system['TaskStore']:
             # Get task parameters
@@ -129,11 +130,19 @@ class  PuLPWriter:
                 self.prob += taskInstEndTimeVar <= instancePeriodEndTimeVar
 
                 #Task execution time has to be greater than or equal to wcet
-                # Equation 2b: 𝑡𝑖.𝑒 = 𝑡𝑖.𝑠 + 𝑡.𝛿
-                # rearrenage 𝑡.𝛿 = 𝑡𝑖.𝑒 - 𝑡𝑖.𝑠
-                # Equation 2d: 𝑡.𝛿 >= 𝑡.wcet
-                # subsutite 2b: 𝑡𝑖.𝑒 - 𝑡𝑖.𝑠 >= 𝑡.wcet
-                self.prob += taskInstEndTimeVar - taskInstStartTimeVar >= taskWcet
+                if (Config.useHeterogeneousCores):
+                    currentTaskAllocations = {}
+                    for c in cores:
+                        currentTaskCoreAllocationVariable = self.getBoolVar(self.taskInstCoreAllocation(instanceName,c["name"]))
+                        currentTaskAllocations[currentTaskCoreAllocationVariable] = math.ceil(taskWcet / float(c["speedup"]))
+
+                    self.prob += taskInstEndTimeVar - taskInstStartTimeVar >= pl.lpSum([alloc * currentTaskAllocations[alloc] for alloc in currentTaskAllocations.keys()]), "WCET_"+instanceName
+                else:
+                    # Equation 2b: 𝑡𝑖.𝑒 = 𝑡𝑖.𝑠 + 𝑡.𝛿
+                    # rearrenage 𝑡.𝛿 = 𝑡𝑖.𝑒 - 𝑡𝑖.𝑠
+                    # Equation 2d: 𝑡.𝛿 >= 𝑡.wcet
+                    # subsutite 2b: 𝑡𝑖.𝑒 - 𝑡𝑖.𝑠 >= 𝑡.wcet
+                    self.prob += taskInstEndTimeVar - taskInstStartTimeVar >= taskWcet
                 
                 # ------------------------------------------------------------------
 
@@ -156,6 +165,15 @@ class  PuLPWriter:
     # Equation 3 for all task instances
     def createTaskExecutionConstraints(self, allTaskInstances, cores):
         self.writeComment("Make sure task executions do not overlap")
+        for taskInstances in allTaskInstances.values():
+            for instance in taskInstances:
+                currentTaskAllocations = list()
+                for c in cores:
+                    currentTaskCoreAllocationVariable = self.getBoolVar(self.taskInstCoreAllocation(instance,c["name"]))
+                    currentTaskAllocations.append(currentTaskCoreAllocationVariable)
+                # Task instances must only be allocated to a single core
+                self.prob += pl.lpSum(currentTaskAllocations) == 1 #only 1 core can be selected
+
         # Add pairwise task constraints to make sure task executions do not overlap (single core)
         while bool(allTaskInstances):
             # Get all instances of all tasks
@@ -173,16 +191,8 @@ class  PuLPWriter:
         return f"pair_{srcTask}_{srcCoreName}_{destTask}_{destCoreName}"
     
     def writeTaskOverlapConstraint(self, currentTaskInst, otherTaskInst, cores):
-        currentTaskAllocations = list()
-        otherTaskAllocations = list()
         taskAllocationPairs = list()
         taskAllocationExclusivePairs = list()
-
-        for c in cores:
-            currentTaskCoreAllocationVariable = self.getBoolVar(self.taskInstCoreAllocation(currentTaskInst,c["name"]))
-            currentTaskAllocations.append(currentTaskCoreAllocationVariable)
-            otherTaskCoreAllocationVariable = self.getBoolVar(self.taskInstCoreAllocation(otherTaskInst,c["name"]))
-            otherTaskAllocations.append(otherTaskCoreAllocationVariable)
 
         for srcCore in cores:
             for destCore in cores:
@@ -198,10 +208,8 @@ class  PuLPWriter:
                 if not (srcCore["name"] == destCore["name"]):
                     taskAllocationExclusivePairs.append(pairTaskCoreAllocationVariable)
 
-        # Task instances must only be allocated to a single core
-        self.prob += pl.lpSum(currentTaskAllocations) == 1 #only 1 core can be selected
-        self.prob += pl.lpSum(otherTaskAllocations) == 1 #only 1 core can be selected
-        self.prob += pl.lpSum(taskAllocationPairs) == 1 #only 1 pair can be selected
+        # Only 1 pair can be selected
+        self.prob += pl.lpSum(taskAllocationPairs) == 1 
 
         controlVariable = self.getBoolVar(self.taskInstExecutionControl(currentTaskInst,otherTaskInst))
         currentTaskInstStartTime = self.getIntVar(self.taskInstStartTime(currentTaskInst))
