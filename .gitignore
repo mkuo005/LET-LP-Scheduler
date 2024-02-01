@@ -7,3 +7,4 @@ gurobi.log
 
 .DS_Store
 schedule.json
+input_system.json

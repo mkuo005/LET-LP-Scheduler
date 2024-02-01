@@ -49,7 +49,7 @@ Config = SimpleNamespace(
     individualLetInstanceParams = False,  # Each instance of a LET task can have different parameters
     useOffSet = True, # Enable task offset
     useHeterogeneousCores = True,
-    restrictTaskInstancesToSameCore = True,
+    restrictTaskInstancesToSameCore = False,
 )
 
 # Web server to handle requests from the LetSyncrhonise LP plugin, 
@@ -317,7 +317,7 @@ def exportSchedule(system, lp, allTaskInstances, results, Config):
                 "executionTime": task['wcet'],
                 "executionIntervals": [ {
                     "startTime": startTime,
-                    "endTime": startTime + wcet,
+                    "endTime": startTime + math.ceil(wcet/c["speedup"]),
                     "core" : allocatedCore["name"]
                 } ],
                 "currentCore": allocatedCore
