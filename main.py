@@ -30,17 +30,10 @@ from types import SimpleNamespace
 # Import PuLP constraint generator
 from PuLPWriter import PuLPWriter
 
-# Tool configuration
-class Solver(Enum):
-    NONE = 0
-    GUROBI = 1
-    PULP = 2
-
 
 Config = SimpleNamespace(
     hostName = "localhost",
     serverPort = 8181,
-    solver = Solver.NONE,
     solveProg = "",
     os = "",
     exeSuffix = "",
@@ -213,10 +206,9 @@ def lpScheduler(system):
             
             # Call the LP solver
             results = {}
-            if Config.solver == Solver.GUROBI:
-                lp.solve(pl.GUROBI())
-            elif Config.solver == Solver.PULP:
-                lp.solve(None) # uses the default PuLP solver
+            
+            lp.solve(pl.getSolver(Config.solverProg)) 
+
             if (lp.prob.status == 1): 
                 for v in lp.prob.variables():
                     results[str(v.name)] = v.varValue
@@ -330,11 +322,14 @@ def exportSchedule(system, lp, allTaskInstances, results, Config):
 
 
 if __name__ == '__main__':
+    avaliableSolvers = pl.listSolvers(onlyAvailable=True)
     print("LET-LP-Scheduler")
     print("----------------")
+    print("Supported Solvers ['GLPK_CMD', 'PYGLPK', 'CPLEX_CMD', 'CPLEX_PY', 'CPLEX_DLL', 'GUROBI', 'GUROBI_CMD', 'MOSEK', 'XPRESS', 'PULP_CBC_CMD', 'COIN_CMD', 'COINMP_DLL', 'CHOCO_CMD', 'MIPCL_CMD', 'SCIP_CMD']")
+    print("Avaliable Solver on this PC: "+str(avaliableSolvers))
     parser = argparse.ArgumentParser()
     parser.add_argument("--file", type=str, default="")
-    parser.add_argument("--solver", choices=["gurobi", "pulp"], type=str, required=True)
+    parser.add_argument("--solver", choices=avaliableSolvers, type=str, required=True)
     args = parser.parse_args()
     
    # Set the OS and executable file suffix
@@ -343,11 +338,10 @@ if __name__ == '__main__':
         Config.exeSuffix = ".exe"
     
     # Set the LP solver
-    if args.solver == "gurobi":
-        Config.solver = Solver.GUROBI
-    elif args.solver == "pulp":
-        Config.solver = Solver.PULP
-    print(f"Solver: {Config.solver}")
+    if args.solver in avaliableSolvers:
+        Config.solverProg = args.solver
+
+    print(f"Solver: {Config.solverProg}")
 
     # Specify a LET system model file and create a schedule, or run in webserver mode for the LetSynchronise plugin.
     if len(args.file) > 0:
