@@ -207,7 +207,7 @@ def lpScheduler(system):
             # Call the LP solver
             results = {}
             
-            lp.solve(pl.getSolver(Config.solverProg)) 
+            lp.solve(Config.solverProg) 
 
             if (lp.prob.status == 1): 
                 for v in lp.prob.variables():

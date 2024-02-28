@@ -317,7 +317,19 @@ class  PuLPWriter:
         else:
             self.prob += self.getIntVar(delayVariable) <= delayValue 
             
-    def solve(self, solver):
+    def solve(self, solverName):
+        solverDict = {'keepFiles': 0,
+                     'mip': True,
+                     'msg': True,
+                     'options': [],
+                     'solver': solverName,
+                     'timeLimit': None,
+                     'warmStart': False}
+        
+        #set custom parameters for Gurobi solver
+        if solverName == "GUROBI_CMD":
+            solverDict['options'] = [("IntegralityFocus","1")] #make solution harder but tries to ensure integer results, some pc was not producing exact results for decision variables
+        solver = pl.getSolverFromDict(solverDict)
         self.prob.writeLP(self.filename)
         #self.prob.writeMPS(self.filename+".mps")
         self.prob.solve(solver)
