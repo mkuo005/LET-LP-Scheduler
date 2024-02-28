@@ -64,13 +64,13 @@ class  PuLPWriter:
     
     def getIntVar(self, name):
         if (name in self.vars) == False:
-            lpVar = pl.LpVariable(name, None, None, pl.LpInteger)
+            lpVar = pl.LpVariable(name, None, None, cat=pl.LpInteger)
             self.vars[name] = lpVar
         return self.vars[name]
     
     def getBoolVar(self, name):
         if (name in self.vars) == False:
-            lpVar = pl.LpVariable(name, None, None, pl.LpBinary)
+            lpVar = pl.LpVariable(name, lowBound=0, upBound=1, cat=pl.LpBinary)
             self.vars[name] = lpVar
         return self.vars[name]
     

@@ -303,7 +303,7 @@ def exportSchedule(system, lp, allTaskInstances, results, Config):
                 print("Error task instance with no core allocation on export")
                 print("Task: "+task['name'])
                 print("Instance: "+instance)
-                raise Exception("Error task instance with no core allocation on export. Task: "+task['name']+"Instance: "+instance)
+                raise Exception("Error task instance with no core allocation on export. Task: "+task['name']+" Instance: "+instance)
             
             taskInstance = {
                 "instance" : index,
