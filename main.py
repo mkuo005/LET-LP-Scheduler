@@ -299,7 +299,12 @@ def exportSchedule(system, lp, allTaskInstances, results, Config):
                 if results[lp.taskInstCoreAllocation(lp.instVarName(task['name'],index), c["name"])] == 1:
                     allocatedCore = c
                     break
-
+            if allocatedCore == None:
+                print("Error task instance with no core allocation on export")
+                print("Task: "+task['name'])
+                print("Instance: "+instance)
+                raise Exception("Error task instance with no core allocation on export. Task: "+task['name']+"Instance: "+instance)
+            
             taskInstance = {
                 "instance" : index,
                 "periodStartTime" : index * period,
@@ -309,7 +314,7 @@ def exportSchedule(system, lp, allTaskInstances, results, Config):
                 "executionTime": task['wcet'],
                 "executionIntervals": [ {
                     "startTime": startTime,
-                    "endTime": startTime + math.ceil(wcet/c["speedup"]),
+                    "endTime": startTime + math.ceil(wcet/allocatedCore["speedup"]),
                     "core" : allocatedCore["name"]
                 } ],
                 "currentCore": allocatedCore
