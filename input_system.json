@@ -11,164 +11,420 @@
   ],
   "SystemInputStore": [
     {
-      "name": "SystemInput"
+      "name": "Va"
+    },
+    {
+      "name": "Va_c"
+    },
+    {
+      "name": "Vz"
+    },
+    {
+      "name": "Vz_c"
+    },
+    {
+      "name": "az"
+    },
+    {
+      "name": "h"
+    },
+    {
+      "name": "h_c"
+    },
+    {
+      "name": "q"
     }
   ],
   "SystemOutputStore": [
     {
-      "name": "SystemOutput"
+      "name": "delta_ec"
+    },
+    {
+      "name": "delta_thc"
     }
   ],
   "TaskStore": [
     {
-      "name": "task_a",
+      "name": "Va_control",
       "initialOffset": 0,
       "activationOffset": 0,
-      "duration": 1500000,
-      "period": 3000000,
+      "duration": 20000000,
+      "period": 20000000,
       "inputs": [
-        "in"
+        "Va_c",
+        "Vzf",
+        "Vaf",
+        "qf"
       ],
       "outputs": [
-        "out"
+        "delta_thc"
       ],
-      "wcet": 1500000,
-      "acet": 1000000,
-      "bcet": 500000,
-      "distribution": "Normal",
-      "priority": 3
-    },
-    {
-      "name": "task_b",
-      "initialOffset": 0,
-      "activationOffset": 0,
-      "duration": 900000,
-      "period": 2000000,
-      "inputs": [
-        "in"
-      ],
-      "outputs": [
-        "out"
-      ],
-      "wcet": 900000,
+      "wcet": 500000,
       "acet": 500000,
-      "bcet": 300000,
-      "distribution": "Uniform",
-      "priority": 2
+      "bcet": 500000,
+      "distribution": "Normal"
     },
     {
-      "name": "task_c",
+      "name": "Va_filter",
       "initialOffset": 0,
       "activationOffset": 0,
-      "duration": 1900000,
-      "period": 2000000,
+      "duration": 10000000,
+      "period": 10000000,
       "inputs": [
-        "in1",
-        "in2"
+        "Va"
       ],
       "outputs": [
-        "out"
+        "Vaf"
       ],
-      "wcet": 1000000,
-      "acet": 1000000,
-      "bcet": 1000000,
-      "distribution": "Weibull",
-      "priority": 1
+      "wcet": 100000,
+      "acet": 100000,
+      "bcet": 100000,
+      "distribution": "Normal"
+    },
+    {
+      "name": "Vz_control",
+      "initialOffset": 0,
+      "activationOffset": 0,
+      "duration": 20000000,
+      "period": 20000000,
+      "inputs": [
+        "Vzc",
+        "azf",
+        "Vzf",
+        "qf",
+        "Vaf"
+      ],
+      "outputs": [
+        "delta_ec"
+      ],
+      "wcet": 100000,
+      "acet": 100000,
+      "bcet": 100000,
+      "distribution": "Normal"
+    },
+    {
+      "name": "Vz_filter",
+      "initialOffset": 0,
+      "activationOffset": 0,
+      "duration": 10000000,
+      "period": 10000000,
+      "inputs": [
+        "Vz"
+      ],
+      "outputs": [
+        "Vzf"
+      ],
+      "wcet": 500000,
+      "acet": 500000,
+      "bcet": 500000,
+      "distribution": "Normal"
+    },
+    {
+      "name": "altitude_hold",
+      "initialOffset": 0,
+      "activationOffset": 0,
+      "duration": 20000000,
+      "period": 20000000,
+      "inputs": [
+        "h_c",
+        "hf"
+      ],
+      "outputs": [
+        "Vzc"
+      ],
+      "wcet": 100000,
+      "acet": 100000,
+      "bcet": 100000,
+      "distribution": "Normal"
+    },
+    {
+      "name": "az_filter",
+      "initialOffset": 0,
+      "activationOffset": 0,
+      "duration": 10000000,
+      "period": 10000000,
+      "inputs": [
+        "az"
+      ],
+      "outputs": [
+        "azf"
+      ],
+      "wcet": 100000,
+      "acet": 100000,
+      "bcet": 100000,
+      "distribution": "Normal"
+    },
+    {
+      "name": "h_filter",
+      "initialOffset": 0,
+      "activationOffset": 0,
+      "duration": 10000000,
+      "period": 10000000,
+      "inputs": [
+        "h"
+      ],
+      "outputs": [
+        "hf"
+      ],
+      "wcet": 100000,
+      "acet": 100000,
+      "bcet": 100000,
+      "distribution": "Normal"
+    },
+    {
+      "name": "q_filter",
+      "initialOffset": 0,
+      "activationOffset": 0,
+      "duration": 10000000,
+      "period": 10000000,
+      "inputs": [
+        "q"
+      ],
+      "outputs": [
+        "qf"
+      ],
+      "wcet": 100000,
+      "acet": 100000,
+      "bcet": 100000,
+      "distribution": "Normal"
     }
   ],
   "DependencyStore": [
     {
-      "name": "alpha",
+      "name": "Va_control_Vac",
       "source": {
         "task": "__system",
-        "port": "SystemInput"
+        "port": "Va_c"
       },
       "destination": {
-        "task": "task_a",
-        "port": "in"
+        "task": "Va_control",
+        "port": "Va_c"
       }
     },
     {
-      "name": "beta",
+      "name": "Va_control_Vaf",
       "source": {
-        "task": "task_a",
-        "port": "out"
+        "task": "Va_filter",
+        "port": "Vaf"
       },
       "destination": {
-        "task": "task_c",
-        "port": "in1"
+        "task": "Va_control",
+        "port": "Vaf"
       }
     },
     {
-      "name": "delta",
+      "name": "Va_control_Vzf",
       "source": {
-        "task": "task_c",
-        "port": "out"
+        "task": "Vz_filter",
+        "port": "Vzf"
+      },
+      "destination": {
+        "task": "Va_control",
+        "port": "Vzf"
+      }
+    },
+    {
+      "name": "Va_control_qf",
+      "source": {
+        "task": "q_filter",
+        "port": "qf"
+      },
+      "destination": {
+        "task": "Va_control",
+        "port": "qf"
+      }
+    },
+    {
+      "name": "Va_filter",
+      "source": {
+        "task": "__system",
+        "port": "Va"
+      },
+      "destination": {
+        "task": "Va_filter",
+        "port": "Va"
+      }
+    },
+    {
+      "name": "Vz_control_Vzc",
+      "source": {
+        "task": "__system",
+        "port": "Vz_c"
+      },
+      "destination": {
+        "task": "Vz_control",
+        "port": "Vzc"
+      }
+    },
+    {
+      "name": "Vz_control_Vzc_altitude_hold",
+      "source": {
+        "task": "altitude_hold",
+        "port": "Vzc"
+      },
+      "destination": {
+        "task": "Vz_control",
+        "port": "Vzc"
+      }
+    },
+    {
+      "name": "Vz_control_Vzf",
+      "source": {
+        "task": "Vz_filter",
+        "port": "Vzf"
+      },
+      "destination": {
+        "task": "Vz_control",
+        "port": "Vzf"
+      }
+    },
+    {
+      "name": "Vz_control_azf",
+      "source": {
+        "task": "az_filter",
+        "port": "azf"
+      },
+      "destination": {
+        "task": "Vz_control",
+        "port": "azf"
+      }
+    },
+    {
+      "name": "Vz_control_qf",
+      "source": {
+        "task": "q_filter",
+        "port": "qf"
+      },
+      "destination": {
+        "task": "Vz_control",
+        "port": "qf"
+      }
+    },
+    {
+      "name": "Vz_filter",
+      "source": {
+        "task": "__system",
+        "port": "Vz"
+      },
+      "destination": {
+        "task": "Vz_filter",
+        "port": "Vz"
+      }
+    },
+    {
+      "name": "altitude_hold_hc",
+      "source": {
+        "task": "__system",
+        "port": "h_c"
+      },
+      "destination": {
+        "task": "altitude_hold",
+        "port": "h_c"
+      }
+    },
+    {
+      "name": "altitude_hold_hf",
+      "source": {
+        "task": "h_filter",
+        "port": "hf"
+      },
+      "destination": {
+        "task": "altitude_hold",
+        "port": "hf"
+      }
+    },
+    {
+      "name": "az_filter",
+      "source": {
+        "task": "__system",
+        "port": "az"
+      },
+      "destination": {
+        "task": "az_filter",
+        "port": "az"
+      }
+    },
+    {
+      "name": "delta_ec",
+      "source": {
+        "task": "Vz_control",
+        "port": "delta_ec"
       },
       "destination": {
         "task": "__system",
-        "port": "SystemOutput"
+        "port": "delta_ec"
       }
     },
     {
-      "name": "gamma",
+      "name": "delta_thc",
       "source": {
-        "task": "task_b",
-        "port": "out"
+        "task": "Va_control",
+        "port": "delta_thc"
       },
       "destination": {
-        "task": "task_c",
-        "port": "in2"
+        "task": "__system",
+        "port": "delta_thc"
       }
     },
     {
-      "name": "theta",
+      "name": "h_filter",
       "source": {
         "task": "__system",
-        "port": "SystemInput"
+        "port": "h"
       },
       "destination": {
-        "task": "task_b",
-        "port": "in"
+        "task": "h_filter",
+        "port": "h"
+      }
+    },
+    {
+      "name": "q_filter",
+      "source": {
+        "task": "__system",
+        "port": "q"
+      },
+      "destination": {
+        "task": "q_filter",
+        "port": "q"
       }
     }
   ],
   "EventChainStore": [
     {
       "segment": {
-        "name": "alpha",
+        "name": "altitude_hold_hc",
         "source": {
           "task": "__system",
-          "port": "SystemInput"
+          "port": "h_c"
         },
         "destination": {
-          "task": "task_a",
-          "port": "in"
+          "task": "altitude_hold",
+          "port": "h_c"
         }
       },
-      "name": "EventChain1",
+      "name": "ControlInput1",
       "successor": {
         "segment": {
-          "name": "beta",
+          "name": "Vz_control_Vzc_altitude_hold",
           "source": {
-            "task": "task_a",
-            "port": "out"
+            "task": "altitude_hold",
+            "port": "Vzc"
           },
           "destination": {
-            "task": "task_c",
-            "port": "in1"
+            "task": "Vz_control",
+            "port": "Vzc"
           }
         },
         "successor": {
           "segment": {
-            "name": "delta",
+            "name": "delta_ec",
             "source": {
-              "task": "task_c",
-              "port": "out"
+              "task": "Vz_control",
+              "port": "delta_ec"
             },
             "destination": {
               "task": "__system",
-              "port": "SystemOutput"
+              "port": "delta_ec"
             }
           }
         }
@@ -176,39 +432,93 @@
     },
     {
       "segment": {
-        "name": "theta",
+        "name": "Vz_control_Vzc",
         "source": {
           "task": "__system",
-          "port": "SystemInput"
+          "port": "Vz_c"
         },
         "destination": {
-          "task": "task_b",
-          "port": "in"
+          "task": "Vz_control",
+          "port": "Vzc"
         }
       },
-      "name": "EventChain2",
+      "name": "ControlInput2",
       "successor": {
         "segment": {
-          "name": "gamma",
+          "name": "delta_ec",
           "source": {
-            "task": "task_b",
-            "port": "out"
+            "task": "Vz_control",
+            "port": "delta_ec"
           },
           "destination": {
-            "task": "task_c",
-            "port": "in2"
+            "task": "__system",
+            "port": "delta_ec"
+          }
+        }
+      }
+    },
+    {
+      "segment": {
+        "name": "Va_control_Vac",
+        "source": {
+          "task": "__system",
+          "port": "Va_c"
+        },
+        "destination": {
+          "task": "Va_control",
+          "port": "Va_c"
+        }
+      },
+      "name": "ControlInput3",
+      "successor": {
+        "segment": {
+          "name": "delta_thc",
+          "source": {
+            "task": "Va_control",
+            "port": "delta_thc"
+          },
+          "destination": {
+            "task": "__system",
+            "port": "delta_thc"
+          }
+        }
+      }
+    },
+    {
+      "segment": {
+        "name": "Va_filter",
+        "source": {
+          "task": "__system",
+          "port": "Va"
+        },
+        "destination": {
+          "task": "Va_filter",
+          "port": "Va"
+        }
+      },
+      "name": "Vafilter",
+      "successor": {
+        "segment": {
+          "name": "Va_control_Vaf",
+          "source": {
+            "task": "Va_filter",
+            "port": "Vaf"
+          },
+          "destination": {
+            "task": "Va_control",
+            "port": "Vaf"
           }
         },
         "successor": {
           "segment": {
-            "name": "delta",
+            "name": "delta_thc",
             "source": {
-              "task": "task_c",
-              "port": "out"
+              "task": "Va_control",
+              "port": "delta_thc"
             },
             "destination": {
               "task": "__system",
-              "port": "SystemOutput"
+              "port": "delta_thc"
             }
           }
         }
@@ -216,46 +526,260 @@
     },
     {
       "segment": {
-        "name": "gamma",
+        "name": "Vz_filter",
         "source": {
-          "task": "task_b",
-          "port": "out"
+          "task": "__system",
+          "port": "Vz"
         },
         "destination": {
-          "task": "task_c",
-          "port": "in2"
+          "task": "Vz_filter",
+          "port": "Vz"
         }
       },
-      "name": "Test"
+      "name": "Vzfilter1",
+      "successor": {
+        "segment": {
+          "name": "Vz_control_Vzf",
+          "source": {
+            "task": "Vz_filter",
+            "port": "Vzf"
+          },
+          "destination": {
+            "task": "Vz_control",
+            "port": "Vzf"
+          }
+        },
+        "successor": {
+          "segment": {
+            "name": "delta_ec",
+            "source": {
+              "task": "Vz_control",
+              "port": "delta_ec"
+            },
+            "destination": {
+              "task": "__system",
+              "port": "delta_ec"
+            }
+          }
+        }
+      }
+    },
+    {
+      "segment": {
+        "name": "Vz_filter",
+        "source": {
+          "task": "__system",
+          "port": "Vz"
+        },
+        "destination": {
+          "task": "Vz_filter",
+          "port": "Vz"
+        }
+      },
+      "name": "Vzfilter2",
+      "successor": {
+        "segment": {
+          "name": "Va_control_Vzf",
+          "source": {
+            "task": "Vz_filter",
+            "port": "Vzf"
+          },
+          "destination": {
+            "task": "Va_control",
+            "port": "Vzf"
+          }
+        },
+        "successor": {
+          "segment": {
+            "name": "delta_thc",
+            "source": {
+              "task": "Va_control",
+              "port": "delta_thc"
+            },
+            "destination": {
+              "task": "__system",
+              "port": "delta_thc"
+            }
+          }
+        }
+      }
+    },
+    {
+      "segment": {
+        "name": "az_filter",
+        "source": {
+          "task": "__system",
+          "port": "az"
+        },
+        "destination": {
+          "task": "az_filter",
+          "port": "az"
+        }
+      },
+      "name": "azfilter",
+      "successor": {
+        "segment": {
+          "name": "Vz_control_azf",
+          "source": {
+            "task": "az_filter",
+            "port": "azf"
+          },
+          "destination": {
+            "task": "Vz_control",
+            "port": "azf"
+          }
+        },
+        "successor": {
+          "segment": {
+            "name": "delta_ec",
+            "source": {
+              "task": "Vz_control",
+              "port": "delta_ec"
+            },
+            "destination": {
+              "task": "__system",
+              "port": "delta_ec"
+            }
+          }
+        }
+      }
+    },
+    {
+      "segment": {
+        "name": "h_filter",
+        "source": {
+          "task": "__system",
+          "port": "h"
+        },
+        "destination": {
+          "task": "h_filter",
+          "port": "h"
+        }
+      },
+      "name": "hfilter",
+      "successor": {
+        "segment": {
+          "name": "altitude_hold_hf",
+          "source": {
+            "task": "h_filter",
+            "port": "hf"
+          },
+          "destination": {
+            "task": "altitude_hold",
+            "port": "hf"
+          }
+        },
+        "successor": {
+          "segment": {
+            "name": "Vz_control_Vzc_altitude_hold",
+            "source": {
+              "task": "altitude_hold",
+              "port": "Vzc"
+            },
+            "destination": {
+              "task": "Vz_control",
+              "port": "Vzc"
+            }
+          },
+          "successor": {
+            "segment": {
+              "name": "delta_ec",
+              "source": {
+                "task": "Vz_control",
+                "port": "delta_ec"
+              },
+              "destination": {
+                "task": "__system",
+                "port": "delta_ec"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "segment": {
+        "name": "q_filter",
+        "source": {
+          "task": "__system",
+          "port": "q"
+        },
+        "destination": {
+          "task": "q_filter",
+          "port": "q"
+        }
+      },
+      "name": "qfilter1",
+      "successor": {
+        "segment": {
+          "name": "Vz_control_qf",
+          "source": {
+            "task": "q_filter",
+            "port": "qf"
+          },
+          "destination": {
+            "task": "Vz_control",
+            "port": "qf"
+          }
+        },
+        "successor": {
+          "segment": {
+            "name": "delta_ec",
+            "source": {
+              "task": "Vz_control",
+              "port": "delta_ec"
+            },
+            "destination": {
+              "task": "__system",
+              "port": "delta_ec"
+            }
+          }
+        }
+      }
+    },
+    {
+      "segment": {
+        "name": "q_filter",
+        "source": {
+          "task": "__system",
+          "port": "q"
+        },
+        "destination": {
+          "task": "q_filter",
+          "port": "q"
+        }
+      },
+      "name": "qfilter2",
+      "successor": {
+        "segment": {
+          "name": "Va_control_qf",
+          "source": {
+            "task": "q_filter",
+            "port": "qf"
+          },
+          "destination": {
+            "task": "Va_control",
+            "port": "qf"
+          }
+        },
+        "successor": {
+          "segment": {
+            "name": "delta_thc",
+            "source": {
+              "task": "Va_control",
+              "port": "delta_thc"
+            },
+            "destination": {
+              "task": "__system",
+              "port": "delta_thc"
+            }
+          }
+        }
+      }
     }
   ],
-  "ConstraintStore": [
-    {
-      "name": "TestConstraint1",
-      "eventChain": "Test",
-      "relation": "<",
-      "time": 3000000
-    },
-    {
-      "name": "TestConstraint2",
-      "eventChain": "Test",
-      "relation": "<",
-      "time": 3000000
-    },
-    {
-      "name": "TimingConstraint1",
-      "eventChain": "EventChain1",
-      "relation": "<=",
-      "time": 4000000
-    },
-    {
-      "name": "TimingConstraint2",
-      "eventChain": "EventChain2",
-      "relation": "<=",
-      "time": 5000000
-    }
-  ],
+  "ConstraintStore": [],
   "PluginParameters": {
-    "Makespan": 24000000
+    "Makespan": 20000000
   }
 }

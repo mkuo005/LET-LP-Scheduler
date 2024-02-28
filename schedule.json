@@ -2,7 +2,7 @@
   "TaskInstancesStore": [
     {
       "name": "task_a",
-      "initialOffset": 0.0,
+      "initialOffset": -0.0,
       "value": [
         {
           "instance": 0,
@@ -46,7 +46,7 @@
     },
     {
       "name": "task_b",
-      "initialOffset": 0.0,
+      "initialOffset": -0.0,
       "value": [
         {
           "instance": 0,
@@ -109,7 +109,7 @@
     },
     {
       "name": "task_c",
-      "initialOffset": 900000.0,
+      "initialOffset": -0.0,
       "value": [
         {
           "instance": 0,
