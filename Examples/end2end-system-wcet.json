@@ -1,4 +1,7 @@
 {
+	"CoreStore": [
+		{ "name": "c1", "speedup": 1 }
+	  ],
 	"SystemInputStore": [
 		{
 			"name": "SystemInput"

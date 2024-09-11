@@ -1,6 +1,13 @@
 """
 This program converts a LetSyncrhonise system model into a set of linear programming 
 constraints that can be solved to minimise the delays of task dependencies.
+
+See the following paper for the original ILP formulation:
+E. Yip and M. M. Y. Kuo. LetSynchronise: An Open-Source Framework for Analysing and 
+Optimising Logical Execution Time Systems. CPS-IoT Week, 2023. Available online at
+https://dl.acm.org/doi/10.1145/3576914.3587500
+
+The formulation in this implementation supports multicores as well.
 """
 
 # Import web server libraries
@@ -23,24 +30,19 @@ from types import SimpleNamespace
 # Import PuLP constraint generator
 from PuLPWriter import PuLPWriter
 
-# Tool configuration
-class Solver(Enum):
-    NONE = 0
-    GUROBI = 1
-    PULP = 2
-
 
 Config = SimpleNamespace(
     hostName = "localhost",
     serverPort = 8181,
-    solver = Solver.NONE,
     solveProg = "",
     os = "",
     exeSuffix = "",
     lpFile = "system.lp",
     objectiveVariable = "sumDependencyDelays",
     individualLetInstanceParams = False,  # Each instance of a LET task can have different parameters
-    useOffSet = False # Enable task offset
+    useOffSet = True, # Enable task offset
+    useHeterogeneousCores = True,
+    restrictTaskInstancesToSameCore = False,
 )
 
 # Web server to handle requests from the LetSyncrhonise LP plugin, 
@@ -93,7 +95,11 @@ class Server(BaseHTTPRequestHandler):
             return
         
         try:
+            inputFile = open("input_system.json", "w+")
+            inputFile.write(json.dumps(system, indent=2))
+            inputFile.close()
             schedule = lpScheduler(system)
+            
             if schedule == None:
                 raise Exception("LetSynchronise system is unschedulable!")
         except FileNotFoundError as error:
@@ -144,6 +150,9 @@ def lpScheduler(system):
 
     # Track the number of iterations to find solution    
     timesRan = 0
+    
+    # Last summation of task dependency delays
+    lastDelays = -1
 
     # FIXME: Why do we even need to iterate?
     # Iterate through each dependency and try to tighten the task dependency delays
@@ -154,30 +163,31 @@ def lpScheduler(system):
         # List of LP constraint used to tighten the current dependency
         delayVariablesToTighten = []
 
-        # Last summation of task dependency delays
-        lastDelays = -1
         
         while lookingForBetterSolution:
             print()
             print(f"Iteration {timesRan} ... {taskDependencyPair}")
             timesRan += 1
-
+            if (system.get("CoreStore") is None or len(system.get("CoreStore")) ==0 ):
+                system["CoreStore"] = [{'name': 'c1', 'speedup': 1}] #needed for old version of the exported file before multicore support
+           
             # Create LP writer for the selected solver
             lp = PuLPWriter(Config.lpFile, Config.objectiveVariable, lpLargeConstant)
 
             # Create the objective to minimize task dependency delay
             lp.writeObjective()
 
-            # Equestion 2
+            # Equation 2
             # Encode the task instances over the scheduling window as LP constraints
             # Return all task instances within the scheduling window
-            allTaskInstances = lp.createTaskInstancesAsConstraints(system, schedulingWindow, Config)
+            allTaskInstances = lp.createTaskInstancesAsConstraints(system, schedulingWindow, system.get("CoreStore"), Config)
             
-            # Equestion 3
+            # Equation 3
             # Create constraints that ensures no two tasks overlap (Single Core)
-            lp.createTaskExecutionConstraints(allTaskInstances.copy())
+            lp.createTaskExecutionConstraints(allTaskInstances.copy(), system.get("CoreStore"), Config)
 
-            # Equestion 4
+
+            # Equations 4 and 5
             # A dependency instance is simply a pair of source and destination task instances
             # Each dependency instance can only have 1 source task but can have mutiple destinations
             # The selected source tasks must complete its execution before the destination task
@@ -190,15 +200,15 @@ def lpScheduler(system):
                     # Add constraints to tighten the current dependency pair to find better solutions.
                     lp.writeDelayConstraints(delayVariable, delayValue, delayVariable in delayVariablesToTighten)
             
+            # Equation 6
             # Create objective equation has to be called after createTaskDependencyConstraints as the depenedency selection varaibles are needed to compute the summed end-to-end time
             lp.writeObjectiveEquation()
             
             # Call the LP solver
             results = {}
-            if Config.solver == Solver.GUROBI:
-                lp.solve(pl.GUROBI())
-            elif Config.solver == Solver.PULP:
-                lp.solve(None) # uses the default PuLP solver
+            
+            lp.solve(Config.solverProg) 
+
             if (lp.prob.status == 1): 
                 for v in lp.prob.variables():
                     results[str(v.name)] = v.varValue
@@ -218,7 +228,7 @@ def lpScheduler(system):
                 print(f"Current summation of task dependency delays: {results[Config.objectiveVariable]} ns")
                 lastDelays = results[Config.objectiveVariable]
                 # Create the task schedule that is encoded in the LP solution
-                lastFeasibleSchedule = exportSchedule(system, lp, allTaskInstances, results)
+                lastFeasibleSchedule = exportSchedule(system, lp, allTaskInstances, results, Config)
 
                 # Determine upper bounds needed to tighten the dependency delays in the next iteration 
                 delayVariablesToTighten = lp.dependencyInstanceDelayVariables[taskDependencyPair]
@@ -255,7 +265,7 @@ def tightenProblemSpace(lp, results):
     
     return delayVariableUpperBounds
 
-def exportSchedule(system, lp, allTaskInstances, results):
+def exportSchedule(system, lp, allTaskInstances, results, Config):
     schedule = {
         "TaskInstancesStore" : []
     }
@@ -263,9 +273,13 @@ def exportSchedule(system, lp, allTaskInstances, results):
     for task in system['TaskStore']:
         if (task['name'] == "__system"):
             continue
-        
+        initialOffset = 0
+        if Config.useOffSet:
+            initialOffset = float(results[lp.taskOffset(task['name'])])
+            
         taskInstancesJson = {
             "name": task['name'],
+            "initialOffset": initialOffset, #FIXME: when is this used in the GUI ?
             "value": []
         }
         
@@ -280,6 +294,17 @@ def exportSchedule(system, lp, allTaskInstances, results):
             period = int(task['period'])
             wcet = int(task['wcet'])
             
+            allocatedCore = None
+            for c in system["CoreStore"]:
+                if results[lp.taskInstCoreAllocation(lp.instVarName(task['name'],index), c["name"])] == 1:
+                    allocatedCore = c
+                    break
+            if allocatedCore == None:
+                print("Error task instance with no core allocation on export")
+                print("Task: "+task['name'])
+                print("Instance: "+instance)
+                raise Exception("Error task instance with no core allocation on export. Task: "+task['name']+" Instance: "+instance)
+            
             taskInstance = {
                 "instance" : index,
                 "periodStartTime" : index * period,
@@ -289,8 +314,10 @@ def exportSchedule(system, lp, allTaskInstances, results):
                 "executionTime": task['wcet'],
                 "executionIntervals": [ {
                     "startTime": startTime,
-                    "endTime": startTime + wcet
-                } ]
+                    "endTime": startTime + math.ceil(wcet/allocatedCore["speedup"]),
+                    "core" : allocatedCore["name"]
+                } ],
+                "currentCore": allocatedCore
             }
             taskInstancesJson['value'].append(taskInstance)
         schedule['TaskInstancesStore'].append(taskInstancesJson)
@@ -300,11 +327,14 @@ def exportSchedule(system, lp, allTaskInstances, results):
 
 
 if __name__ == '__main__':
+    avaliableSolvers = pl.listSolvers(onlyAvailable=True)
     print("LET-LP-Scheduler")
     print("----------------")
+    print("Supported Solvers ['GLPK_CMD', 'PYGLPK', 'CPLEX_CMD', 'CPLEX_PY', 'CPLEX_DLL', 'GUROBI', 'GUROBI_CMD', 'MOSEK', 'XPRESS', 'PULP_CBC_CMD', 'COIN_CMD', 'COINMP_DLL', 'CHOCO_CMD', 'MIPCL_CMD', 'SCIP_CMD']")
+    print("Avaliable Solver on this PC: "+str(avaliableSolvers))
     parser = argparse.ArgumentParser()
     parser.add_argument("--file", type=str, default="")
-    parser.add_argument("--solver", choices=["gurobi", "pulp"], type=str, required=True)
+    parser.add_argument("--solver", choices=avaliableSolvers, type=str, required=True)
     args = parser.parse_args()
     
    # Set the OS and executable file suffix
@@ -313,11 +343,10 @@ if __name__ == '__main__':
         Config.exeSuffix = ".exe"
     
     # Set the LP solver
-    if args.solver == "gurobi":
-        Config.solver = Solver.GUROBI
-    elif args.solver == "pulp":
-        Config.solver = Solver.PULP
-    print(f"Solver: {Config.solver}")
+    if args.solver in avaliableSolvers:
+        Config.solverProg = args.solver
+
+    print(f"Solver: {Config.solverProg}")
 
     # Specify a LET system model file and create a schedule, or run in webserver mode for the LetSynchronise plugin.
     if len(args.file) > 0:
