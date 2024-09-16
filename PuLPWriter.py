@@ -1,20 +1,24 @@
 import pulp as pl
 import math
+from enum import Enum
 class  PuLPWriter:
     equations = [{}]
-    
+    OVERALL_END_TO_END = 1
+    MIN_SUM_END_TIME = 2
+
     def listAvalaibleSolvers(self):
         solver_list = pl.listSolvers(onlyAvailable=True)
         print("Avaliable Solver on System:" + solver_list)
         print("Supported Solvers: "+pl.listSolvers())
 
-    def __init__(self, filename, objectiveVariable, lpLargeConstant):
+    def __init__(self, filename, objectiveVariable, lpLargeConstant, objectiveType=OVERALL_END_TO_END):
         self.prob = pl.LpProblem(filename, pl.LpMinimize)
         self.filename = filename
         self.objectiveVariable = pl.LpVariable(objectiveVariable, None, None, pl.LpInteger)
         self.lpLargeConstant = lpLargeConstant
-        
+        self.objectiveType = objectiveType
         self.dependencyInstanceDelayVariables = {}
+        self.allTaskInstances = {}
         
         # All variables
         self.vars = {}
@@ -30,8 +34,11 @@ class  PuLPWriter:
         #dependencyInstanceDelays = ' - '.join([x for v in self.dependencyInstanceDelayVariables.values() for x in v])
         #self.write(f"{self.objectiveVariable} - {dependencyInstanceDelays} = 0;\n", "Objective equation")
         #print([self.getIntVar(x) for v in self.dependencyInstanceDelayVariables.values() for x in v])
-        self.prob += self.objectiveVariable == pl.lpSum([self.getIntVar(x) for v in self.dependencyInstanceDelayVariables.values() for x in v])
-
+        if (self.objectiveType == self.OVERALL_END_TO_END):
+            self.prob += self.objectiveVariable == pl.lpSum([self.getIntVar(x) for v in self.dependencyInstanceDelayVariables.values() for x in v])
+        elif (self.objectiveType == self.MIN_SUM_END_TIME):
+            self.prob += self.objectiveVariable == pl.lpSum([self.getIntVar(self.taskInstPeriodEndTime(x)) for v in self.allTaskInstances.values() for x in v])
+   
     def taskOffset(self, taskInstance):
         return f"{taskInstance}_offset"
     
@@ -94,7 +101,7 @@ class  PuLPWriter:
                 # Task instance name includes an instance number
                 instanceName = self.instVarName(taskName, len(instances))
                 instances.append(instanceName)
-                
+
                 instancePeriodStartTimeVar = self.getIntVar(self.taskInstPeriodStartTime(instanceName))
 
                 # introduce solution space where t.o is equal to or larger than 0
@@ -158,9 +165,9 @@ class  PuLPWriter:
                     # Make sure all LET instances start and end at the same time
                     self.prob += taskInstEndTimeVar - taskEndTimeVar == instancePeriodStartTimeVar
 
-
-            allTaskInstances[taskName] = instances
-        return allTaskInstances
+            
+            self.allTaskInstances[taskName] = instances
+        return self.allTaskInstances.copy() #maintain the all task instances dictionary for use in different object functions
     
     # Equation 3 for all task instances
     def createTaskExecutionConstraints(self, allTaskInstances, cores, Config):
