@@ -42,7 +42,8 @@ Config = SimpleNamespace(
     individualLetInstanceParams = False,  # Each instance of a LET task can have different parameters
     useOffSet = True, # Enable task offset
     useHeterogeneousCores = True,
-    restrictTaskInstancesToSameCore = False,
+    restrictTaskInstancesToSameCore = True,
+    objectiveType = PuLPWriter.OVERALL_END_TO_END,
 )
 
 # Web server to handle requests from the LetSyncrhonise LP plugin, 
@@ -172,7 +173,7 @@ def lpScheduler(system):
                 system["CoreStore"] = [{'name': 'c1', 'speedup': 1}] #needed for old version of the exported file before multicore support
            
             # Create LP writer for the selected solver
-            lp = PuLPWriter(Config.lpFile, Config.objectiveVariable, lpLargeConstant)
+            lp = PuLPWriter(Config.lpFile, Config.objectiveVariable, lpLargeConstant, Config.objectiveType)
 
             # Create the objective to minimize task dependency delay
             lp.writeObjective()
@@ -225,7 +226,7 @@ def lpScheduler(system):
             else:
                 # Problem is feasible
                 print("LetSynchronise system is schedulable")
-                print(f"Current summation of task dependency delays: {results[Config.objectiveVariable]} ns")
+                print(f"Current objective value: {results[Config.objectiveVariable]} ns")
                 lastDelays = results[Config.objectiveVariable]
                 # Create the task schedule that is encoded in the LP solution
                 lastFeasibleSchedule = exportSchedule(system, lp, allTaskInstances, results, Config)
@@ -243,7 +244,7 @@ def lpScheduler(system):
             break
             
     print(f"Iterated a total of {timesRan} times")
-    print(f"Final summation of task dependency delays: {lastDelays} ns")
+    print(f"Final objective value: {lastDelays} ns")
     return lastFeasibleSchedule
 
 def tightenProblemSpace(lp, results):
