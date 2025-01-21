@@ -85,7 +85,7 @@ class  PuLPWriter:
     # Create constraints to compute task instance start and end times for each task instance (i) within the scheduling window
     def createTaskInstancesAsConstraints(self, system, schedulingWindow, cores, Config):
         allTaskInstances = {}
-        for task in system['TaskStore']:
+        for task in system['EntityStore']:
             # Get task parameters
             taskName = task['name']
             taskWcet = task['wcet']

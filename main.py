@@ -30,6 +30,8 @@ from types import SimpleNamespace
 # Import PuLP constraint generator
 from PuLPWriter import PuLPWriter
 
+from untitled import UntitledScheduler
+
 
 Config = SimpleNamespace(
     hostName = "localhost",
@@ -99,7 +101,11 @@ class Server(BaseHTTPRequestHandler):
             inputFile = open("input_system.json", "w+")
             inputFile.write(json.dumps(system, indent=2))
             inputFile.close()
-            schedule = lpScheduler(system)
+            schedule = None
+            if self.path and self.path == '/ilp':
+                schedule = lpScheduler(system)
+            if self.path and self.path == '/untitled':
+                UntitledScheduler.minimise_core(system)
             
             if schedule == None:
                 raise Exception("LetSynchronise system is unschedulable!")
@@ -116,13 +122,13 @@ class Server(BaseHTTPRequestHandler):
         self.wfile.write(bytes(json.dumps(schedule), "utf-8"))
 
     def do_PUT(self):
-        self.do_POST();
+        self.do_POST()
 
 
 # LP Scheduler
 def lpScheduler(system):
     # Determine the hyper-period of the tasks
-    taskPeriods = [task['period'] for task in system['TaskStore']]
+    taskPeriods = [task['period'] for task in system['EntityStore']]
     hyperPeriod = math.lcm(*taskPeriods)
     print(f"System hyper-period: {hyperPeriod} ns")
 
@@ -268,10 +274,10 @@ def tightenProblemSpace(lp, results):
 
 def exportSchedule(system, lp, allTaskInstances, results, Config):
     schedule = {
-        "TaskInstancesStore" : []
+        "EntityInstancesStore" : []
     }
     
-    for task in system['TaskStore']:
+    for task in system['EntityStore']:
         if (task['name'] == "__system"):
             continue
         initialOffset = 0
@@ -321,7 +327,7 @@ def exportSchedule(system, lp, allTaskInstances, results, Config):
                 "currentCore": allocatedCore
             }
             taskInstancesJson['value'].append(taskInstance)
-        schedule['TaskInstancesStore'].append(taskInstancesJson)
+        schedule['EntityInstancesStore'].append(taskInstancesJson)
     return schedule
 
 
