@@ -3,12 +3,7 @@
     {
       "name": "c1",
       "speedup": 1,
-      "device": "d1"
-    },
-    {
-      "name": "c2",
-      "speedup": 1,
-      "device": "d2"
+      "device": "Default"
     }
   ],
   "SystemInputStore": [
@@ -25,7 +20,6 @@
     {
       "name": "task_a",
       "type": "task",
-      "priority": null,
       "initialOffset": 0,
       "activationOffset": 200000,
       "duration": 4500000,
@@ -39,8 +33,7 @@
       "wcet": 3000000,
       "acet": 2500000,
       "bcet": 2000000,
-      "distribution": "Normal",
-      "core": "c1"
+      "distribution": "Normal"
     },
     {
       "name": "task_b",
@@ -59,8 +52,7 @@
       "wcet": 500000,
       "acet": 400000,
       "bcet": 300000,
-      "distribution": "Uniform",
-      "core": "c1"
+      "distribution": "Uniform"
     },
     {
       "name": "task_c",
@@ -80,8 +72,7 @@
       "wcet": 250000,
       "acet": 175000,
       "bcet": 100000,
-      "distribution": "Weibull",
-      "core": "c2"
+      "distribution": "Weibull"
     }
   ],
   "DependencyStore": [
@@ -121,65 +112,17 @@
     {
       "name": "d",
       "source": {
-        "task": "task_a",
+        "task": "task_c",
         "port": "out"
       },
       "destination": {
-        "task": "task_c",
-        "port": "in1"
+        "task": "__system",
+        "port": "SystemOutput"
       }
     }
   ],
   "EventChainStore": [],
   "ConstraintStore": [],
-  "DeviceStore": [
-    {
-      "name": "d1",
-      "speedup": 1,
-      "delays": [
-        {
-          "protocol": "tcp",
-          "bcdt": 200000,
-          "acdt": 500000,
-          "wcdt": 800000,
-          "distribution": "Normal"
-        }
-      ]
-    },
-    {
-      "name": "d2",
-      "speedup": 1,
-      "delays": [
-        {
-          "protocol": "tcp",
-          "bcdt": 200000,
-          "acdt": 500000,
-          "wcdt": 800000,
-          "distribution": "Normal"
-        }
-      ]
-    }
-  ],
-  "NetworkDelayStore": [
-    {
-      "name": "d1-to-d2",
-      "source": "d1",
-      "dest": "d2",
-      "bcdt": 500000,
-      "acdt": 800000,
-      "wcdt": 1000000,
-      "distribution": "Normal"
-    },
-    {
-      "name": "d2-to-d1",
-      "source": "d2",
-      "dest": "d1",
-      "bcdt": 500000,
-      "acdt": 800000,
-      "wcdt": 1000000,
-      "distribution": "Normal"
-    }
-  ],
   "PluginParameters": {
     "Makespan": 20000000
   }

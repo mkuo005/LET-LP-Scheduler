@@ -1,6 +1,4 @@
 import math
-import pandas as pd
-import pulp
 from pulp import PULP_CBC_CMD, LpProblem, LpMinimize, LpVariable, lpSum
 
 class UntitledScheduler():
@@ -9,12 +7,12 @@ class UntitledScheduler():
     @staticmethod
     def minimise_core(system):
         prob = LpProblem("Minimise_Cores", LpMinimize)
-        # taskPeriods = [task['period'] for task in system['EntityStore']]
+        taskPeriods = [task['period'] for task in system['EntityStore']]
         tasks = [task for task in system['EntityStore']]
         cores = [core for core in system['CoreStore']]
         #devices = [device['name', device['wcdt']] for device in system['DeviceStore']]
         #networkDelays = [(networkDelay['name'], networkDelay['wcdt']) for networkDelay in system['NetworkDelayStore']]
-        # hyperPeriod = math.lcm(*taskPeriods)
+        hyperPeriod = math.lcm(*taskPeriods)
         # makespan = system['PluginParameters']['Makespan']
         # schedulingWindow = math.ceil(makespan / hyperPeriod) * hyperPeriod
 
@@ -27,8 +25,14 @@ class UntitledScheduler():
                             cat='Binary')
         
         # Constraint
+        # 1. A task can have exactly one core assigned to it.
         for task in tasks:
             prob += lpSum(a[(task['name'], core['name'])] for core in cores) == 1
+        
+        # 2. There should be enough execution time per hyper-period for each task
+        for core in cores:
+            prob += lpSum(a[(task['name'], core['name'])] * (hyperPeriod / task['period']) * task['wcet']
+                for task in tasks) <= hyperPeriod
         
         # Objective
         objective = lpSum(a[(task['name'], core['name'])] for task in tasks for core in cores)
