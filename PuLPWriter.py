@@ -76,9 +76,11 @@ class  PuLPWriter:
         return self.vars[name]
     
     def getBoolVar(self, name):
+        print(f"line 79: {name}, {self.vars}")
         if (name in self.vars) == False:
             lpVar = pl.LpVariable(name, lowBound=0, upBound=1, cat=pl.LpBinary)
             self.vars[name] = lpVar
+            print(f"line 83: {lpVar}, {self.vars[name]}")
         return self.vars[name]
     
     # Equation 2
@@ -171,15 +173,21 @@ class  PuLPWriter:
     
     # Equation 3 for all task instances
     def createTaskExecutionConstraints(self, allTaskInstances, cores, Config):
+        print(f"allTaskInstances: {allTaskInstances}")
+        print(f"cores: {cores}")
         self.writeComment("Make sure task executions do not overlap")
         for taskInstances in allTaskInstances.values():
+            print(f"First for loop taskInstances: {taskInstances}")
             for instance in taskInstances:
+                print(f"Second for loop instance: {instance}")
                 currentTaskAllocations = list()
                 for c in cores:
                     currentTaskCoreAllocationVariable = self.getBoolVar(self.taskInstCoreAllocation(instance,c["name"]))
+                    print(f"thrid for loop currndTaskCoreAllocationVariable: {currentTaskCoreAllocationVariable}")
                     currentTaskAllocations.append(currentTaskCoreAllocationVariable)
                 # Task instances must only be allocated to a single core
                 self.prob += pl.lpSum(currentTaskAllocations) == 1 #only 1 core can be selected
+                print(f"currentTaskAllocations: {currentTaskAllocations}")
         if Config.restrictTaskInstancesToSameCore:
             for c in cores:
                 for taskName, taskInstances in allTaskInstances.items():
@@ -187,6 +195,8 @@ class  PuLPWriter:
                     for instance in taskInstances:
                         currentTaskCoreAllocationVariable = self.getBoolVar(self.taskInstCoreAllocation(instance,c["name"]))
                         self.prob += taskCoreAllocationVariable == currentTaskCoreAllocationVariable, "restrict_"+c["name"]+"_"+taskName+"_"+instance
+                        print(f"linet 197: {c}, {taskName}, {taskInstances}, {currentTaskAllocations}")
+        print(f"line 189: {self.prob}")
         # Add pairwise task constraints to make sure task executions do not overlap (single core)
         while bool(allTaskInstances):
             # Get all instances of all tasks
@@ -206,20 +216,26 @@ class  PuLPWriter:
     def writeTaskOverlapConstraint(self, currentTaskInst, otherTaskInst, cores):
         taskAllocationPairs = list()
         taskAllocationExclusivePairs = list()
+        print(f"line 217: {currentTaskInst}, {otherTaskInst}")
+        print(f"line 271: {cores}")
 
         for srcCore in cores:
             for destCore in cores:
+                print(f"source & dest core: {srcCore}, {destCore}")
                 currentTaskCoreAllocationVariable = self.getBoolVar(self.taskInstCoreAllocation(currentTaskInst,srcCore["name"]))
                 otherTaskCoreAllocationVariable = self.getBoolVar(self.taskInstCoreAllocation(otherTaskInst,destCore["name"]))
+                print(f"line 222: {currentTaskCoreAllocationVariable}, {otherTaskCoreAllocationVariable}")
 
                 pairTaskCoreAllocationVariable = self.getBoolVar(self.taskInstCorePairsAllocation(currentTaskInst,srcCore["name"],otherTaskInst,destCore["name"]))
                 taskAllocationPairs.append(pairTaskCoreAllocationVariable)
+                print(f"line 226: {pairTaskCoreAllocationVariable}, {taskAllocationPairs}")
 
                 #if this pair has been allocated naturally the task allocation must also be allocated
                 self.prob += pairTaskCoreAllocationVariable <= currentTaskCoreAllocationVariable
                 self.prob += pairTaskCoreAllocationVariable <= otherTaskCoreAllocationVariable
                 if not (srcCore["name"] == destCore["name"]):
                     taskAllocationExclusivePairs.append(pairTaskCoreAllocationVariable)
+        print(f"line 233: {self.prob}")
 
         # Only 1 pair can be selected
         self.prob += pl.lpSum(taskAllocationPairs) == 1 
@@ -233,7 +249,10 @@ class  PuLPWriter:
         # Equation 3a and Equation 3b
 
         # 𝑡𝑖𝑥.𝑒 − 𝑡𝑗𝑦.𝑠 ≤ N × 𝑏𝑡𝑎𝑠𝑘𝑥,𝑖,𝑦,𝑗
+        print(f"line 249: {self.lpLargeConstant}")
         self.prob += currentTaskInstEndTime - otherTaskInstStartTime <= self.lpLargeConstant * controlVariable + pl.lpSum([x * self.lpLargeConstant for x in taskAllocationExclusivePairs])
+        print(f"line 252: {currentTaskInstEndTime} - {otherTaskInstStartTime} <= {self.lpLargeConstant} * {controlVariable} + {pl.lpSum([x * self.lpLargeConstant for x in taskAllocationExclusivePairs])}")
+        print(f"line 253: {taskAllocationExclusivePairs}")
 
         #𝑡𝑗𝑦.𝑒 − 𝑡𝑖𝑥.𝑠 ≤ N − N × 𝑏𝑡𝑎𝑠𝑘𝑥,𝑖,𝑦,
         self.prob += otherTaskInstEndTime - currentTaskInstStartTime <= self.lpLargeConstant - self.lpLargeConstant * controlVariable + pl.lpSum([x * self.lpLargeConstant for x in taskAllocationExclusivePairs])

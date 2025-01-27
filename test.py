@@ -281,6 +281,7 @@ system = {
 "CoreStore": [
     {"name": "c1", "device": "d1"},
     {"name": "c2", "device": "d2"},
+    {"name": "c3", "device": "d2"},
 ],
 "PluginParameters": {"Makespan": 20000000},
 }

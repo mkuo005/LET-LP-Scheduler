@@ -4,6 +4,11 @@
       "name": "c1",
       "speedup": 1,
       "device": "Default"
+    },
+    {
+      "name": "c2",
+      "speedup": 1,
+      "device": "Default"
     }
   ],
   "SystemInputStore": [
@@ -20,8 +25,9 @@
     {
       "name": "task_a",
       "type": "task",
+      "priority": null,
       "initialOffset": 0,
-      "activationOffset": 200000,
+      "activationOffset": 0,
       "duration": 4500000,
       "period": 5000000,
       "inputs": [
@@ -30,17 +36,18 @@
       "outputs": [
         "out"
       ],
-      "wcet": 3000000,
-      "acet": 2500000,
-      "bcet": 2000000,
-      "distribution": "Normal"
+      "wcet": 500000,
+      "acet": 400000,
+      "bcet": 300000,
+      "distribution": "Normal",
+      "core": null
     },
     {
       "name": "task_b",
       "type": "task",
       "priority": 1,
       "initialOffset": 0,
-      "activationOffset": 500000,
+      "activationOffset": 0,
       "duration": 1000000,
       "period": 2000000,
       "inputs": [
@@ -52,27 +59,8 @@
       "wcet": 500000,
       "acet": 400000,
       "bcet": 300000,
-      "distribution": "Uniform"
-    },
-    {
-      "name": "task_c",
-      "type": "task",
-      "priority": 3,
-      "initialOffset": 750000,
-      "activationOffset": 0,
-      "duration": 400000,
-      "period": 1000000,
-      "inputs": [
-        "in1",
-        "in2"
-      ],
-      "outputs": [
-        "out"
-      ],
-      "wcet": 250000,
-      "acet": 175000,
-      "bcet": 100000,
-      "distribution": "Weibull"
+      "distribution": "Uniform",
+      "core": null
     }
   ],
   "DependencyStore": [
@@ -96,28 +84,6 @@
       "destination": {
         "task": "task_b",
         "port": "in"
-      }
-    },
-    {
-      "name": "c",
-      "source": {
-        "task": "task_b",
-        "port": "out"
-      },
-      "destination": {
-        "task": "task_c",
-        "port": "in1"
-      }
-    },
-    {
-      "name": "d",
-      "source": {
-        "task": "task_c",
-        "port": "out"
-      },
-      "destination": {
-        "task": "__system",
-        "port": "SystemOutput"
       }
     }
   ],
