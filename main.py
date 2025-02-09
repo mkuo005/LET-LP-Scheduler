@@ -30,7 +30,7 @@ from types import SimpleNamespace
 # Import PuLP constraint generator
 from PuLPWriter import PuLPWriter
 
-from untitled import UntitledScheduler
+from multicore import MultiCoreScheduler
 
 
 Config = SimpleNamespace(
@@ -102,12 +102,14 @@ class Server(BaseHTTPRequestHandler):
             inputFile.write(json.dumps(system, indent=2))
             inputFile.close()
             schedule = None
+            status = None
             if self.path and self.path == '/ilp':
-                schedule = lpScheduler(system)
-            if self.path and self.path == '/untitled':
-                UntitledScheduler.minimise_core(system)
+                status, schedule = lpScheduler(system)
+            if self.path and self.path == '/multicore':
+                scheduler = MultiCoreScheduler()
+                status, schedule = scheduler.multicore_core_scheduler(system)
             
-            if schedule == None:
+            if status == 0:
                 raise Exception("LetSynchronise system is unschedulable!")
         except FileNotFoundError as error:
             traceback.print_exc()
@@ -251,7 +253,7 @@ def lpScheduler(system):
             
     print(f"Iterated a total of {timesRan} times")
     print(f"Final objective value: {lastDelays} ns")
-    return lastFeasibleSchedule
+    return lp.prob.sol_status, lastFeasibleSchedule
 
 def tightenProblemSpace(lp, results):
     delayResults = {solutionVariable: solutionValue for solutionVariable, solutionValue in results.items() if "delay_" in solutionVariable}
