@@ -1,98 +1,130 @@
 {
-  "DeviceStore": [
-    {
-      "name": "d1",
-      "speedup": 1,
-      "delays": [
-        {
-          "protocol": "tcp",
-          "bcdt": 200000,
-          "acdt": 300000,
-          "wcdt": 400000,
-          "distribution": "Normal"
-        }
-      ]
-    },
-    {
-      "name": "d2",
-      "speedup": 1,
-      "delays": [
-        {
-          "protocol": "tcp",
-          "bcdt": 200000,
-          "acdt": 300000,
-          "wcdt": 400000,
-          "distribution": "Normal"
-        }
-      ]
-    }
-  ],
-  "NetworkDelayStore": [
-    {
-      "name": "d1-to-d2",
-      "source": "d1",
-      "dest": "d2",
-      "bcdt": 400000,
-      "acdt": 500000,
-      "wcdt": 600000,
-      "distribution": "Normal"
-    },
-    {
-      "name": "d2-to-d1",
-      "source": "d2",
-      "dest": "d1",
-      "bcdt": 400000,
-      "acdt": 500000,
-      "wcdt": 1000000,
-      "distribution": "Normal"
-    }
-  ],
   "CoreStore": [
     {
       "name": "c1",
       "speedup": 1,
       "device": "d1"
-    }
-  ],
-  "EntityStore": [
-    {
-      "name": "task_a",
-      "type": "task",
-      "initialOffset": 0,
-      "activationOffset": 200000,
-      "duration": 4500000,
-      "period": 5000000,
-      "inputs": [
-        "in"
-      ],
-      "outputs": [
-        "out"
-      ],
-      "wcet": 3000000,
-      "acet": 2500000,
-      "bcet": 2000000,
-      "distribution": "Normal"
     },
     {
-      "name": "task_b",
-      "type": "task",
-      "priority": 1,
-      "initialOffset": 0,
-      "activationOffset": 500000,
-      "duration": 1000000,
-      "period": 2000000,
-      "inputs": [
-        "in"
-      ],
-      "outputs": [
-        "out"
-      ],
-      "wcet": 500000,
-      "acet": 400000,
-      "bcet": 300000,
-      "distribution": "Uniform"
+      "name": "c2",
+      "speedup": 1,
+      "device": "d1"
     }
   ],
+  "ConstraintInstancesStore": [],
+  "DependencyInstancesStore": [
+    {
+      "name": "a",
+      "value": [
+        {
+          "instance": 0,
+          "receiveEvent": {
+            "task": "task_b",
+            "port": "in",
+            "taskInstance": 3,
+            "timestamp": 6500000
+          },
+          "sendEvent": {
+            "task": "task_a",
+            "port": "out",
+            "taskInstance": 0,
+            "timestamp": 4700000
+          }
+        },
+        {
+          "instance": 1,
+          "receiveEvent": {
+            "task": "task_b",
+            "port": "in",
+            "taskInstance": 4,
+            "timestamp": 8500000
+          },
+          "sendEvent": {
+            "task": "task_a",
+            "port": "out",
+            "taskInstance": 0,
+            "timestamp": 4700000
+          }
+        },
+        {
+          "instance": 2,
+          "receiveEvent": {
+            "task": "task_b",
+            "port": "in",
+            "taskInstance": 5,
+            "timestamp": 10500000
+          },
+          "sendEvent": {
+            "task": "task_a",
+            "port": "out",
+            "taskInstance": 1,
+            "timestamp": 9700000
+          }
+        },
+        {
+          "instance": 3,
+          "receiveEvent": {
+            "task": "task_b",
+            "port": "in",
+            "taskInstance": 6,
+            "timestamp": 12500000
+          },
+          "sendEvent": {
+            "task": "task_a",
+            "port": "out",
+            "taskInstance": 1,
+            "timestamp": 9700000
+          }
+        },
+        {
+          "instance": 4,
+          "receiveEvent": {
+            "task": "task_b",
+            "port": "in",
+            "taskInstance": 7,
+            "timestamp": 14500000
+          },
+          "sendEvent": {
+            "task": "task_a",
+            "port": "out",
+            "taskInstance": 1,
+            "timestamp": 9700000
+          }
+        },
+        {
+          "instance": 5,
+          "receiveEvent": {
+            "task": "task_b",
+            "port": "in",
+            "taskInstance": 8,
+            "timestamp": 16500000
+          },
+          "sendEvent": {
+            "task": "task_a",
+            "port": "out",
+            "taskInstance": 2,
+            "timestamp": 14700000
+          }
+        },
+        {
+          "instance": 6,
+          "receiveEvent": {
+            "task": "task_b",
+            "port": "in",
+            "taskInstance": 9,
+            "timestamp": 18500000
+          },
+          "sendEvent": {
+            "task": "task_a",
+            "port": "out",
+            "taskInstance": 2,
+            "timestamp": 14700000
+          }
+        }
+      ]
+    }
+  ],
+  "EventChainInstanceStore": [],
   "EntityInstancesStore": [
     {
       "name": "task_a",
@@ -109,12 +141,7 @@
           "executionIntervals": [
             {
               "startTime": 200000,
-              "endTime": 500000,
-              "core": "c1"
-            },
-            {
-              "startTime": 800000,
-              "endTime": 2500000,
+              "endTime": 2200000,
               "core": "c1"
             }
           ],
@@ -135,17 +162,12 @@
           "executionIntervals": [
             {
               "startTime": 5200000,
-              "endTime": 6500000,
-              "core": "c1"
-            },
-            {
-              "startTime": 6800000,
-              "endTime": 7500000,
-              "core": "c1"
+              "endTime": 7200000,
+              "core": "c2"
             }
           ],
           "currentCore": {
-            "name": "c1",
+            "name": "c2",
             "speedup": 1,
             "device": "d1"
           },
@@ -161,17 +183,12 @@
           "executionIntervals": [
             {
               "startTime": 10200000,
-              "endTime": 10500000,
-              "core": "c1"
-            },
-            {
-              "startTime": 10800000,
-              "endTime": 12500000,
-              "core": "c1"
+              "endTime": 12200000,
+              "core": "c2"
             }
           ],
           "currentCore": {
-            "name": "c1",
+            "name": "c2",
             "speedup": 1,
             "device": "d1"
           },
@@ -187,12 +204,7 @@
           "executionIntervals": [
             {
               "startTime": 15200000,
-              "endTime": 16500000,
-              "core": "c1"
-            },
-            {
-              "startTime": 16800000,
-              "endTime": 17500000,
+              "endTime": 17200000,
               "core": "c1"
             }
           ],
@@ -222,11 +234,11 @@
             {
               "startTime": 500000,
               "endTime": 800000,
-              "core": "c1"
+              "core": "c2"
             }
           ],
           "currentCore": {
-            "name": "c1",
+            "name": "c2",
             "speedup": 1,
             "device": "d1"
           },
@@ -243,11 +255,11 @@
             {
               "startTime": 2500000,
               "endTime": 2800000,
-              "core": "c1"
+              "core": "c2"
             }
           ],
           "currentCore": {
-            "name": "c1",
+            "name": "c2",
             "speedup": 1,
             "device": "d1"
           },
@@ -369,11 +381,11 @@
             {
               "startTime": 14500000,
               "endTime": 14800000,
-              "core": "c1"
+              "core": "c2"
             }
           ],
           "currentCore": {
-            "name": "c1",
+            "name": "c2",
             "speedup": 1,
             "device": "d1"
           },
@@ -390,11 +402,11 @@
             {
               "startTime": 16500000,
               "endTime": 16800000,
-              "core": "c1"
+              "core": "c2"
             }
           ],
           "currentCore": {
-            "name": "c1",
+            "name": "c2",
             "speedup": 1,
             "device": "d1"
           },
@@ -411,11 +423,11 @@
             {
               "startTime": 18500000,
               "endTime": 18800000,
-              "core": "c1"
+              "core": "c2"
             }
           ],
           "currentCore": {
-            "name": "c1",
+            "name": "c2",
             "speedup": 1,
             "device": "d1"
           },
@@ -423,6 +435,93 @@
         }
       ],
       "executionTiming": "BCET"
+    }
+  ],
+  "NetworkDelayStore": [
+    {
+      "name": "d1-to-d2",
+      "source": "d1",
+      "dest": "d2",
+      "bcdt": 300000,
+      "acdt": 400000,
+      "wcdt": 500000,
+      "distribution": "Normal"
+    },
+    {
+      "name": "d2-to-d1",
+      "source": "d2",
+      "dest": "d1",
+      "bcdt": 300000,
+      "acdt": 400000,
+      "wcdt": 500000,
+      "distribution": "Normal"
+    }
+  ],
+  "DeviceStore": [
+    {
+      "name": "d1",
+      "speedup": 1,
+      "delays": [
+        {
+          "protocol": "tcp",
+          "bcdt": 200000,
+          "acdt": 300000,
+          "wcdt": 400000,
+          "distribution": "Normal"
+        }
+      ]
+    },
+    {
+      "name": "d2",
+      "speedup": 1,
+      "delays": [
+        {
+          "protocol": "tcp",
+          "bcdt": 200000,
+          "acdt": 300000,
+          "wcdt": 400000,
+          "distribution": "Normal"
+        }
+      ]
+    }
+  ],
+  "EntityStore": [
+    {
+      "name": "task_a",
+      "type": "task",
+      "initialOffset": 0,
+      "activationOffset": 200000,
+      "duration": 4500000,
+      "period": 5000000,
+      "inputs": [
+        "in"
+      ],
+      "outputs": [
+        "out"
+      ],
+      "wcet": 3000000,
+      "acet": 2500000,
+      "bcet": 2000000,
+      "distribution": "Normal"
+    },
+    {
+      "name": "task_b",
+      "type": "task",
+      "priority": 1,
+      "initialOffset": 0,
+      "activationOffset": 500000,
+      "duration": 1000000,
+      "period": 2000000,
+      "inputs": [
+        "in"
+      ],
+      "outputs": [
+        "out"
+      ],
+      "wcet": 500000,
+      "acet": 400000,
+      "bcet": 300000,
+      "distribution": "Uniform"
     }
   ],
   "DependencyStore": [
@@ -436,118 +535,6 @@
         "task": "task_b",
         "port": "in"
       }
-    }
-  ],
-  "DependencyInstancesStore": [
-    {
-      "name": "a",
-      "value": [
-        {
-          "instance": 0,
-          "receiveEvent": {
-            "task": "task_b",
-            "port": "in",
-            "taskInstance": 3,
-            "timestamp": 6500000
-          },
-          "sendEvent": {
-            "task": "task_a",
-            "port": "out",
-            "taskInstance": 0,
-            "timestamp": 4700000
-          }
-        },
-        {
-          "instance": 1,
-          "receiveEvent": {
-            "task": "task_b",
-            "port": "in",
-            "taskInstance": 4,
-            "timestamp": 8500000
-          },
-          "sendEvent": {
-            "task": "task_a",
-            "port": "out",
-            "taskInstance": 0,
-            "timestamp": 4700000
-          }
-        },
-        {
-          "instance": 2,
-          "receiveEvent": {
-            "task": "task_b",
-            "port": "in",
-            "taskInstance": 5,
-            "timestamp": 10500000
-          },
-          "sendEvent": {
-            "task": "task_a",
-            "port": "out",
-            "taskInstance": 1,
-            "timestamp": 9700000
-          }
-        },
-        {
-          "instance": 3,
-          "receiveEvent": {
-            "task": "task_b",
-            "port": "in",
-            "taskInstance": 6,
-            "timestamp": 12500000
-          },
-          "sendEvent": {
-            "task": "task_a",
-            "port": "out",
-            "taskInstance": 1,
-            "timestamp": 9700000
-          }
-        },
-        {
-          "instance": 4,
-          "receiveEvent": {
-            "task": "task_b",
-            "port": "in",
-            "taskInstance": 7,
-            "timestamp": 14500000
-          },
-          "sendEvent": {
-            "task": "task_a",
-            "port": "out",
-            "taskInstance": 1,
-            "timestamp": 9700000
-          }
-        },
-        {
-          "instance": 5,
-          "receiveEvent": {
-            "task": "task_b",
-            "port": "in",
-            "taskInstance": 8,
-            "timestamp": 16500000
-          },
-          "sendEvent": {
-            "task": "task_a",
-            "port": "out",
-            "taskInstance": 2,
-            "timestamp": 14700000
-          }
-        },
-        {
-          "instance": 6,
-          "receiveEvent": {
-            "task": "task_b",
-            "port": "in",
-            "taskInstance": 9,
-            "timestamp": 18500000
-          },
-          "sendEvent": {
-            "task": "task_a",
-            "port": "out",
-            "taskInstance": 2,
-            "timestamp": 14700000
-          }
-        }
-      ]
     }
   ],
   "PluginParameters": {

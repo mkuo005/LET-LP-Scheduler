@@ -294,11 +294,11 @@ system = {
       "speedup": 1,
       "device": "d2"
     },
-    # {
-    #   "name": "c4",
-    #   "speedup": 1,
-    #   "device": "d1"
-    # }
+    {
+      "name": "c4",
+      "speedup": 1,
+      "device": "d1"
+    }
   ],
 "DeviceStore": [
     {
@@ -329,67 +329,67 @@ system = {
     }
   ],
   "DependencyStore": [
-    {
-      "name": "a",
-      "source": {
-        "task": "__system",
-        "port": "SystemInput"
-      },
-      "destination": {
-        "task": "task_a",
-        "port": "in"
-      }
-    },
-    {
-      "name": "b",
-      "source": {
-        "task": "task_a",
-        "port": "out"
-      },
-      "destination": {
-        "task": "task_b",
-        "port": "in"
-      }
-    },
-        {
-      "name": "c",
-      "source": {
-        "task": "task_b",
-        "port": "out"
-      },
-      "destination": {
-        "task": "task_c",
-        "port": "in"
-      }
-    }
-  ],
-  "DeviceStore": [
-    {
-      "name": "d1",
-      "speedup": 1,
-      "delays": [
-        {
-          "protocol": "tcp",
-          "bcdt": 200000,
-          "acdt": 500000,
-          "wcdt": 800000,
-          "distribution": "Normal"
-        }
-      ]
-    },
-    {
-      "name": "d2",
-      "speedup": 1,
-      "delays": [
-        {
-          "protocol": "tcp",
-          "bcdt": 200000,
-          "acdt": 500000,
-          "wcdt": 800000,
-          "distribution": "Normal"
-        }
-      ]
-    }
+  #   {
+  #     "name": "a",
+  #     "source": {
+  #       "task": "__system",
+  #       "port": "SystemInput"
+  #     },
+  #     "destination": {
+  #       "task": "task_a",
+  #       "port": "in"
+  #     }
+  #   },
+  #   {
+  #     "name": "b",
+  #     "source": {
+  #       "task": "task_a",
+  #       "port": "out"
+  #     },
+  #     "destination": {
+  #       "task": "task_b",
+  #       "port": "in"
+  #     }
+  #   },
+  #       {
+  #     "name": "c",
+  #     "source": {
+  #       "task": "task_b",
+  #       "port": "out"
+  #     },
+  #     "destination": {
+  #       "task": "task_c",
+  #       "port": "in"
+  #     }
+  #   }
+  # ],
+  # "DeviceStore": [
+  #   {
+  #     "name": "d1",
+  #     "speedup": 1,
+  #     "delays": [
+  #       {
+  #         "protocol": "tcp",
+  #         "bcdt": 200000,
+  #         "acdt": 500000,
+  #         "wcdt": 800000,
+  #         "distribution": "Normal"
+  #       }
+  #     ]
+  #   },
+  #   {
+  #     "name": "d2",
+  #     "speedup": 1,
+  #     "delays": [
+  #       {
+  #         "protocol": "tcp",
+  #         "bcdt": 200000,
+  #         "acdt": 500000,
+  #         "wcdt": 800000,
+  #         "distribution": "Normal"
+  #       }
+  #     ]
+  #   }
   ],
    "NetworkDelayStore": [
     {
