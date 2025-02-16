@@ -274,11 +274,11 @@ class MultiCoreScheduler():
                         start_time = self.s[(instance['name'], value['instance'])].varValue
                         end_time = self.e[(instance['name'], value['instance'])].varValue
 
-                        execution_time = {
+                        execution_time = [{
                             "core": core['name'],
                             "endTime": end_time,
                             "startTime": start_time
-                        }
+                        }]
 
-                        value['currentCore'] = core['name']
+                        value['currentCore'] = core
                         value['executionIntervals'] = execution_time

@@ -153,6 +153,7 @@ def lpScheduler(system):
 
     # Store last feasible task schedule
     lastFeasibleSchedule = None
+    result = None
 
     # Store the names of the dependency pair instances that we want to reduce their delays.
     delayVariableUpperBounds = {}
@@ -219,8 +220,11 @@ def lpScheduler(system):
             lp.solve(Config.solverProg) 
 
             if (lp.prob.status == 1): 
+                result = lp.prob.sol_status
                 for v in lp.prob.variables():
                     results[str(v.name)] = v.varValue
+            else:
+                result = lp.prob.sol_status
 
             print("Results:")
             if len(results) == 0 :
@@ -249,11 +253,11 @@ def lpScheduler(system):
                 lookingForBetterSolution = False
 
         if not Config.individualLetInstanceParams:
-            break
-            
+            break     
+        
     print(f"Iterated a total of {timesRan} times")
     print(f"Final objective value: {lastDelays} ns")
-    return lp.prob.sol_status, lastFeasibleSchedule
+    return result, lastFeasibleSchedule
 
 def tightenProblemSpace(lp, results):
     delayResults = {solutionVariable: solutionValue for solutionVariable, solutionValue in results.items() if "delay_" in solutionVariable}
