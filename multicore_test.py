@@ -440,8 +440,9 @@ system = {
       }
     }
   ],
-"PluginParameters": {"Makespan": 11000000},
+"PluginParameters": {"Makespan": 10000000},
 }
 
 scheduler = MultiCoreScheduler()
-scheduler.multicore_core_scheduler(system)
+# scheduler.multicore_core_scheduler(system)
+scheduler.create_task_instances(system)

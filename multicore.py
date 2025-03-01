@@ -282,3 +282,41 @@ class MultiCoreScheduler():
 
                         value['currentCore'] = core
                         value['executionIntervals'] = execution_time
+
+    def create_task_instances(self, system):
+        tasks = [task for task in system['EntityStore']]
+        makespan = system['PluginParameters']['Makespan']
+
+        task_instances = {}
+
+        for task in tasks:
+            instances = []
+            number_of_instances = math.ceil((makespan - task['initialOffset']) / task['period'])
+            
+            for i in range(0, number_of_instances):
+                instances.append(self.create_task_instance(task, i))
+
+            data = {
+                "name": task['name'],
+                "type": "task",
+                "initialOffset": task['initialOffset'],
+                "value": instances
+            }
+            
+            task_instances[task['name']] = data
+        
+        return task_instances
+
+    def create_task_instance(self, task, index):
+        periodStartTime = (index * task['period']) + task['initialOffset']
+        periodEndTime = periodStartTime + task['period']
+        letStartTime = periodStartTime + task['activationOffset']
+        letEndTime = letStartTime + task['duration']
+
+        return {
+            "instance": index,
+            "periodStartTime": periodStartTime,
+            "periodEndTime": periodEndTime,
+            "letStartTime": letStartTime,
+            "letEndTime": letEndTime
+        }
