@@ -105,7 +105,7 @@ class Server(BaseHTTPRequestHandler):
             status = None
             if self.path and self.path == '/ilp':
                 status, schedule = lpScheduler(system)
-            if self.path and self.path == '/multicore':
+            if self.path and self.path == '/min-core-usage':
                 scheduler = MultiCoreScheduler()
                 status, schedule = scheduler.multicore_core_scheduler(system)
             

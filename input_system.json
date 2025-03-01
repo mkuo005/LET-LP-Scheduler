@@ -12,7 +12,408 @@
     }
   ],
   "ConstraintInstancesStore": [],
-  "DependencyInstancesStore": [],
+  "DependencyInstancesStore": [
+    {
+      "name": "a",
+      "value": [
+        {
+          "instance": 0,
+          "receiveEvent": {
+            "task": "task_b",
+            "port": "in",
+            "taskInstance": 3,
+            "timestamp": 6500000
+          },
+          "sendEvent": {
+            "task": "task_a",
+            "port": "out",
+            "taskInstance": 0,
+            "timestamp": 4700000
+          }
+        },
+        {
+          "instance": 1,
+          "receiveEvent": {
+            "task": "task_b",
+            "port": "in",
+            "taskInstance": 4,
+            "timestamp": 8500000
+          },
+          "sendEvent": {
+            "task": "task_a",
+            "port": "out",
+            "taskInstance": 0,
+            "timestamp": 4700000
+          }
+        },
+        {
+          "instance": 2,
+          "receiveEvent": {
+            "task": "task_b",
+            "port": "in",
+            "taskInstance": 5,
+            "timestamp": 10500000
+          },
+          "sendEvent": {
+            "task": "task_a",
+            "port": "out",
+            "taskInstance": 1,
+            "timestamp": 9700000
+          }
+        },
+        {
+          "instance": 3,
+          "receiveEvent": {
+            "task": "task_b",
+            "port": "in",
+            "taskInstance": 6,
+            "timestamp": 12500000
+          },
+          "sendEvent": {
+            "task": "task_a",
+            "port": "out",
+            "taskInstance": 1,
+            "timestamp": 9700000
+          }
+        },
+        {
+          "instance": 4,
+          "receiveEvent": {
+            "task": "task_b",
+            "port": "in",
+            "taskInstance": 7,
+            "timestamp": 14500000
+          },
+          "sendEvent": {
+            "task": "task_a",
+            "port": "out",
+            "taskInstance": 1,
+            "timestamp": 9700000
+          }
+        },
+        {
+          "instance": 5,
+          "receiveEvent": {
+            "task": "task_b",
+            "port": "in",
+            "taskInstance": 8,
+            "timestamp": 16500000
+          },
+          "sendEvent": {
+            "task": "task_a",
+            "port": "out",
+            "taskInstance": 2,
+            "timestamp": 14700000
+          }
+        },
+        {
+          "instance": 6,
+          "receiveEvent": {
+            "task": "task_b",
+            "port": "in",
+            "taskInstance": 9,
+            "timestamp": 18500000
+          },
+          "sendEvent": {
+            "task": "task_a",
+            "port": "out",
+            "taskInstance": 2,
+            "timestamp": 14700000
+          }
+        }
+      ]
+    },
+    {
+      "name": "b",
+      "value": [
+        {
+          "instance": 0,
+          "receiveEvent": {
+            "task": "task_c",
+            "port": "in1",
+            "taskInstance": 1,
+            "timestamp": 1750000
+          },
+          "sendEvent": {
+            "task": "task_b",
+            "port": "out",
+            "taskInstance": 0,
+            "timestamp": 1500000
+          }
+        },
+        {
+          "instance": 1,
+          "receiveEvent": {
+            "task": "task_c",
+            "port": "in1",
+            "taskInstance": 2,
+            "timestamp": 2750000
+          },
+          "sendEvent": {
+            "task": "task_b",
+            "port": "out",
+            "taskInstance": 0,
+            "timestamp": 1500000
+          }
+        },
+        {
+          "instance": 2,
+          "receiveEvent": {
+            "task": "task_c",
+            "port": "in1",
+            "taskInstance": 3,
+            "timestamp": 3750000
+          },
+          "sendEvent": {
+            "task": "task_b",
+            "port": "out",
+            "taskInstance": 1,
+            "timestamp": 3500000
+          }
+        },
+        {
+          "instance": 3,
+          "receiveEvent": {
+            "task": "task_c",
+            "port": "in1",
+            "taskInstance": 4,
+            "timestamp": 4750000
+          },
+          "sendEvent": {
+            "task": "task_b",
+            "port": "out",
+            "taskInstance": 1,
+            "timestamp": 3500000
+          }
+        },
+        {
+          "instance": 4,
+          "receiveEvent": {
+            "task": "task_c",
+            "port": "in1",
+            "taskInstance": 5,
+            "timestamp": 5750000
+          },
+          "sendEvent": {
+            "task": "task_b",
+            "port": "out",
+            "taskInstance": 2,
+            "timestamp": 5500000
+          }
+        },
+        {
+          "instance": 5,
+          "receiveEvent": {
+            "task": "task_c",
+            "port": "in1",
+            "taskInstance": 6,
+            "timestamp": 6750000
+          },
+          "sendEvent": {
+            "task": "task_b",
+            "port": "out",
+            "taskInstance": 2,
+            "timestamp": 5500000
+          }
+        },
+        {
+          "instance": 6,
+          "receiveEvent": {
+            "task": "task_c",
+            "port": "in1",
+            "taskInstance": 7,
+            "timestamp": 7750000
+          },
+          "sendEvent": {
+            "task": "task_b",
+            "port": "out",
+            "taskInstance": 3,
+            "timestamp": 7500000
+          }
+        },
+        {
+          "instance": 7,
+          "receiveEvent": {
+            "task": "task_c",
+            "port": "in1",
+            "taskInstance": 8,
+            "timestamp": 8750000
+          },
+          "sendEvent": {
+            "task": "task_b",
+            "port": "out",
+            "taskInstance": 3,
+            "timestamp": 7500000
+          }
+        },
+        {
+          "instance": 8,
+          "receiveEvent": {
+            "task": "task_c",
+            "port": "in1",
+            "taskInstance": 9,
+            "timestamp": 9750000
+          },
+          "sendEvent": {
+            "task": "task_b",
+            "port": "out",
+            "taskInstance": 4,
+            "timestamp": 9500000
+          }
+        },
+        {
+          "instance": 9,
+          "receiveEvent": {
+            "task": "task_c",
+            "port": "in1",
+            "taskInstance": 10,
+            "timestamp": 10750000
+          },
+          "sendEvent": {
+            "task": "task_b",
+            "port": "out",
+            "taskInstance": 4,
+            "timestamp": 9500000
+          }
+        },
+        {
+          "instance": 10,
+          "receiveEvent": {
+            "task": "task_c",
+            "port": "in1",
+            "taskInstance": 11,
+            "timestamp": 11750000
+          },
+          "sendEvent": {
+            "task": "task_b",
+            "port": "out",
+            "taskInstance": 5,
+            "timestamp": 11500000
+          }
+        },
+        {
+          "instance": 11,
+          "receiveEvent": {
+            "task": "task_c",
+            "port": "in1",
+            "taskInstance": 12,
+            "timestamp": 12750000
+          },
+          "sendEvent": {
+            "task": "task_b",
+            "port": "out",
+            "taskInstance": 5,
+            "timestamp": 11500000
+          }
+        },
+        {
+          "instance": 12,
+          "receiveEvent": {
+            "task": "task_c",
+            "port": "in1",
+            "taskInstance": 13,
+            "timestamp": 13750000
+          },
+          "sendEvent": {
+            "task": "task_b",
+            "port": "out",
+            "taskInstance": 6,
+            "timestamp": 13500000
+          }
+        },
+        {
+          "instance": 13,
+          "receiveEvent": {
+            "task": "task_c",
+            "port": "in1",
+            "taskInstance": 14,
+            "timestamp": 14750000
+          },
+          "sendEvent": {
+            "task": "task_b",
+            "port": "out",
+            "taskInstance": 6,
+            "timestamp": 13500000
+          }
+        },
+        {
+          "instance": 14,
+          "receiveEvent": {
+            "task": "task_c",
+            "port": "in1",
+            "taskInstance": 15,
+            "timestamp": 15750000
+          },
+          "sendEvent": {
+            "task": "task_b",
+            "port": "out",
+            "taskInstance": 7,
+            "timestamp": 15500000
+          }
+        },
+        {
+          "instance": 15,
+          "receiveEvent": {
+            "task": "task_c",
+            "port": "in1",
+            "taskInstance": 16,
+            "timestamp": 16750000
+          },
+          "sendEvent": {
+            "task": "task_b",
+            "port": "out",
+            "taskInstance": 7,
+            "timestamp": 15500000
+          }
+        },
+        {
+          "instance": 16,
+          "receiveEvent": {
+            "task": "task_c",
+            "port": "in1",
+            "taskInstance": 17,
+            "timestamp": 17750000
+          },
+          "sendEvent": {
+            "task": "task_b",
+            "port": "out",
+            "taskInstance": 8,
+            "timestamp": 17500000
+          }
+        },
+        {
+          "instance": 17,
+          "receiveEvent": {
+            "task": "task_c",
+            "port": "in1",
+            "taskInstance": 18,
+            "timestamp": 18750000
+          },
+          "sendEvent": {
+            "task": "task_b",
+            "port": "out",
+            "taskInstance": 8,
+            "timestamp": 17500000
+          }
+        },
+        {
+          "instance": 18,
+          "receiveEvent": {
+            "task": "task_c",
+            "port": "in1",
+            "taskInstance": 19,
+            "timestamp": 19750000
+          },
+          "sendEvent": {
+            "task": "task_b",
+            "port": "out",
+            "taskInstance": 9,
+            "timestamp": 19500000
+          }
+        }
+      ]
+    }
+  ],
   "EventChainInstanceStore": [],
   "EntityInstancesStore": [
     {
@@ -26,32 +427,19 @@
           "letStartTime": 200000,
           "letEndTime": 4700000,
           "periodEndTime": 5000000,
-          "executionTime": 2000000,
+          "executionTime": 100000,
           "executionIntervals": [
             {
-              "startTime": 200000,
-              "endTime": 500000,
-              "core": "Default"
-            },
-            {
-              "startTime": 900000,
-              "endTime": 1750000,
-              "core": "Default"
-            },
-            {
-              "startTime": 1850000,
-              "endTime": 2500000,
-              "core": "Default"
-            },
-            {
-              "startTime": 2900000,
-              "endTime": 3100000,
-              "core": "Default"
+              "core": "c2",
+              "endTime": 750000,
+              "startTime": 650000
             }
           ],
           "currentCore": {
-            "name": "Default",
-            "speedup": 1
+            "name": "c2",
+            "speedup": 1,
+            "device": "d2",
+            "id": 1
           },
           "remainingExecutionTime": 0
         },
@@ -61,27 +449,19 @@
           "letStartTime": 5200000,
           "letEndTime": 9700000,
           "periodEndTime": 10000000,
-          "executionTime": 2000000,
+          "executionTime": 100000,
           "executionIntervals": [
             {
-              "startTime": 5200000,
-              "endTime": 5750000,
-              "core": "Default"
-            },
-            {
-              "startTime": 5850000,
-              "endTime": 6500000,
-              "core": "Default"
-            },
-            {
-              "startTime": 6900000,
-              "endTime": 7700000,
-              "core": "Default"
+              "core": "c2",
+              "endTime": 5900000,
+              "startTime": 5800000
             }
           ],
           "currentCore": {
-            "name": "Default",
-            "speedup": 1
+            "name": "c2",
+            "speedup": 1,
+            "device": "d2",
+            "id": 1
           },
           "remainingExecutionTime": 0
         },
@@ -91,32 +471,19 @@
           "letStartTime": 10200000,
           "letEndTime": 14700000,
           "periodEndTime": 15000000,
-          "executionTime": 2000000,
+          "executionTime": 100000,
           "executionIntervals": [
             {
-              "startTime": 10200000,
-              "endTime": 10500000,
-              "core": "Default"
-            },
-            {
-              "startTime": 10900000,
-              "endTime": 11750000,
-              "core": "Default"
-            },
-            {
-              "startTime": 11850000,
-              "endTime": 12500000,
-              "core": "Default"
-            },
-            {
-              "startTime": 12900000,
-              "endTime": 13100000,
-              "core": "Default"
+              "core": "c2",
+              "endTime": 10750000,
+              "startTime": 10650000
             }
           ],
           "currentCore": {
-            "name": "Default",
-            "speedup": 1
+            "name": "c2",
+            "speedup": 1,
+            "device": "d2",
+            "id": 1
           },
           "remainingExecutionTime": 0
         },
@@ -126,27 +493,19 @@
           "letStartTime": 15200000,
           "letEndTime": 19700000,
           "periodEndTime": 20000000,
-          "executionTime": 2000000,
+          "executionTime": 100000,
           "executionIntervals": [
             {
-              "startTime": 15200000,
-              "endTime": 15750000,
-              "core": "Default"
-            },
-            {
-              "startTime": 15850000,
-              "endTime": 16500000,
-              "core": "Default"
-            },
-            {
-              "startTime": 16900000,
-              "endTime": 17700000,
-              "core": "Default"
+              "core": "c2",
+              "endTime": 16750000,
+              "startTime": 16650000
             }
           ],
           "currentCore": {
-            "name": "Default",
-            "speedup": 1
+            "name": "c2",
+            "speedup": 1,
+            "device": "d2",
+            "id": 1
           },
           "remainingExecutionTime": 0
         }
@@ -167,19 +526,16 @@
           "executionTime": 300000,
           "executionIntervals": [
             {
-              "startTime": 500000,
-              "endTime": 750000,
-              "core": "Default"
-            },
-            {
-              "startTime": 850000,
-              "endTime": 900000,
-              "core": "Default"
+              "core": "c2",
+              "endTime": 1500000,
+              "startTime": 1000000
             }
           ],
           "currentCore": {
-            "name": "Default",
-            "speedup": 1
+            "name": "c2",
+            "speedup": 1,
+            "device": "d2",
+            "id": 1
           },
           "remainingExecutionTime": 0
         },
@@ -192,19 +548,16 @@
           "executionTime": 300000,
           "executionIntervals": [
             {
-              "startTime": 2500000,
-              "endTime": 2750000,
-              "core": "Default"
-            },
-            {
-              "startTime": 2850000,
-              "endTime": 2900000,
-              "core": "Default"
+              "core": "c2",
+              "endTime": 3500000,
+              "startTime": 3000000
             }
           ],
           "currentCore": {
-            "name": "Default",
-            "speedup": 1
+            "name": "c2",
+            "speedup": 1,
+            "device": "d2",
+            "id": 1
           },
           "remainingExecutionTime": 0
         },
@@ -217,19 +570,16 @@
           "executionTime": 300000,
           "executionIntervals": [
             {
-              "startTime": 4500000,
-              "endTime": 4750000,
-              "core": "Default"
-            },
-            {
-              "startTime": 4850000,
-              "endTime": 4900000,
-              "core": "Default"
+              "core": "c2",
+              "endTime": 5500000,
+              "startTime": 5000000
             }
           ],
           "currentCore": {
-            "name": "Default",
-            "speedup": 1
+            "name": "c2",
+            "speedup": 1,
+            "device": "d2",
+            "id": 1
           },
           "remainingExecutionTime": 0
         },
@@ -242,19 +592,16 @@
           "executionTime": 300000,
           "executionIntervals": [
             {
-              "startTime": 6500000,
-              "endTime": 6750000,
-              "core": "Default"
-            },
-            {
-              "startTime": 6850000,
-              "endTime": 6900000,
-              "core": "Default"
+              "core": "c2",
+              "endTime": 7500000,
+              "startTime": 7000000
             }
           ],
           "currentCore": {
-            "name": "Default",
-            "speedup": 1
+            "name": "c2",
+            "speedup": 1,
+            "device": "d2",
+            "id": 1
           },
           "remainingExecutionTime": 0
         },
@@ -267,19 +614,16 @@
           "executionTime": 300000,
           "executionIntervals": [
             {
-              "startTime": 8500000,
-              "endTime": 8750000,
-              "core": "Default"
-            },
-            {
-              "startTime": 8850000,
-              "endTime": 8900000,
-              "core": "Default"
+              "core": "c2",
+              "endTime": 9500000,
+              "startTime": 9000000
             }
           ],
           "currentCore": {
-            "name": "Default",
-            "speedup": 1
+            "name": "c2",
+            "speedup": 1,
+            "device": "d2",
+            "id": 1
           },
           "remainingExecutionTime": 0
         },
@@ -292,19 +636,16 @@
           "executionTime": 300000,
           "executionIntervals": [
             {
-              "startTime": 10500000,
-              "endTime": 10750000,
-              "core": "Default"
-            },
-            {
-              "startTime": 10850000,
-              "endTime": 10900000,
-              "core": "Default"
+              "core": "c2",
+              "endTime": 11500000,
+              "startTime": 11000000
             }
           ],
           "currentCore": {
-            "name": "Default",
-            "speedup": 1
+            "name": "c2",
+            "speedup": 1,
+            "device": "d2",
+            "id": 1
           },
           "remainingExecutionTime": 0
         },
@@ -317,19 +658,16 @@
           "executionTime": 300000,
           "executionIntervals": [
             {
-              "startTime": 12500000,
-              "endTime": 12750000,
-              "core": "Default"
-            },
-            {
-              "startTime": 12850000,
-              "endTime": 12900000,
-              "core": "Default"
+              "core": "c2",
+              "endTime": 13500000,
+              "startTime": 13000000
             }
           ],
           "currentCore": {
-            "name": "Default",
-            "speedup": 1
+            "name": "c2",
+            "speedup": 1,
+            "device": "d2",
+            "id": 1
           },
           "remainingExecutionTime": 0
         },
@@ -342,19 +680,16 @@
           "executionTime": 300000,
           "executionIntervals": [
             {
-              "startTime": 14500000,
-              "endTime": 14750000,
-              "core": "Default"
-            },
-            {
-              "startTime": 14850000,
-              "endTime": 14900000,
-              "core": "Default"
+              "core": "c2",
+              "endTime": 15500000,
+              "startTime": 15000000
             }
           ],
           "currentCore": {
-            "name": "Default",
-            "speedup": 1
+            "name": "c2",
+            "speedup": 1,
+            "device": "d2",
+            "id": 1
           },
           "remainingExecutionTime": 0
         },
@@ -367,19 +702,16 @@
           "executionTime": 300000,
           "executionIntervals": [
             {
-              "startTime": 16500000,
-              "endTime": 16750000,
-              "core": "Default"
-            },
-            {
-              "startTime": 16850000,
-              "endTime": 16900000,
-              "core": "Default"
+              "core": "c2",
+              "endTime": 17500000,
+              "startTime": 17000000
             }
           ],
           "currentCore": {
-            "name": "Default",
-            "speedup": 1
+            "name": "c2",
+            "speedup": 1,
+            "device": "d2",
+            "id": 1
           },
           "remainingExecutionTime": 0
         },
@@ -392,19 +724,16 @@
           "executionTime": 300000,
           "executionIntervals": [
             {
-              "startTime": 18500000,
-              "endTime": 18750000,
-              "core": "Default"
-            },
-            {
-              "startTime": 18850000,
-              "endTime": 18900000,
-              "core": "Default"
+              "core": "c2",
+              "endTime": 19500000,
+              "startTime": 19000000
             }
           ],
           "currentCore": {
-            "name": "Default",
-            "speedup": 1
+            "name": "c2",
+            "speedup": 1,
+            "device": "d2",
+            "id": 1
           },
           "remainingExecutionTime": 0
         }
@@ -425,14 +754,16 @@
           "executionTime": 100000,
           "executionIntervals": [
             {
-              "startTime": 750000,
-              "endTime": 850000,
-              "core": "Default"
+              "core": "c2",
+              "endTime": 1000000,
+              "startTime": 750000
             }
           ],
           "currentCore": {
-            "name": "Default",
-            "speedup": 1
+            "name": "c2",
+            "speedup": 1,
+            "device": "d2",
+            "id": 1
           },
           "remainingExecutionTime": 0
         },
@@ -445,14 +776,16 @@
           "executionTime": 100000,
           "executionIntervals": [
             {
-              "startTime": 1750000,
-              "endTime": 1850000,
-              "core": "Default"
+              "core": "c2",
+              "endTime": 2000000,
+              "startTime": 1750000
             }
           ],
           "currentCore": {
-            "name": "Default",
-            "speedup": 1
+            "name": "c2",
+            "speedup": 1,
+            "device": "d2",
+            "id": 1
           },
           "remainingExecutionTime": 0
         },
@@ -465,14 +798,16 @@
           "executionTime": 100000,
           "executionIntervals": [
             {
-              "startTime": 2750000,
-              "endTime": 2850000,
-              "core": "Default"
+              "core": "c2",
+              "endTime": 3000000,
+              "startTime": 2750000
             }
           ],
           "currentCore": {
-            "name": "Default",
-            "speedup": 1
+            "name": "c2",
+            "speedup": 1,
+            "device": "d2",
+            "id": 1
           },
           "remainingExecutionTime": 0
         },
@@ -485,14 +820,16 @@
           "executionTime": 100000,
           "executionIntervals": [
             {
-              "startTime": 3750000,
-              "endTime": 3850000,
-              "core": "Default"
+              "core": "c2",
+              "endTime": 4000000,
+              "startTime": 3750000
             }
           ],
           "currentCore": {
-            "name": "Default",
-            "speedup": 1
+            "name": "c2",
+            "speedup": 1,
+            "device": "d2",
+            "id": 1
           },
           "remainingExecutionTime": 0
         },
@@ -505,14 +842,16 @@
           "executionTime": 100000,
           "executionIntervals": [
             {
-              "startTime": 4750000,
-              "endTime": 4850000,
-              "core": "Default"
+              "core": "c2",
+              "endTime": 5000000,
+              "startTime": 4750000
             }
           ],
           "currentCore": {
-            "name": "Default",
-            "speedup": 1
+            "name": "c2",
+            "speedup": 1,
+            "device": "d2",
+            "id": 1
           },
           "remainingExecutionTime": 0
         },
@@ -525,14 +864,16 @@
           "executionTime": 100000,
           "executionIntervals": [
             {
-              "startTime": 5750000,
-              "endTime": 5850000,
-              "core": "Default"
+              "core": "c2",
+              "endTime": 6150000,
+              "startTime": 5900000
             }
           ],
           "currentCore": {
-            "name": "Default",
-            "speedup": 1
+            "name": "c2",
+            "speedup": 1,
+            "device": "d2",
+            "id": 1
           },
           "remainingExecutionTime": 0
         },
@@ -545,14 +886,16 @@
           "executionTime": 100000,
           "executionIntervals": [
             {
-              "startTime": 6750000,
-              "endTime": 6850000,
-              "core": "Default"
+              "core": "c2",
+              "endTime": 7000000,
+              "startTime": 6750000
             }
           ],
           "currentCore": {
-            "name": "Default",
-            "speedup": 1
+            "name": "c2",
+            "speedup": 1,
+            "device": "d2",
+            "id": 1
           },
           "remainingExecutionTime": 0
         },
@@ -565,14 +908,16 @@
           "executionTime": 100000,
           "executionIntervals": [
             {
-              "startTime": 7750000,
-              "endTime": 7850000,
-              "core": "Default"
+              "core": "c2",
+              "endTime": 8000000,
+              "startTime": 7750000
             }
           ],
           "currentCore": {
-            "name": "Default",
-            "speedup": 1
+            "name": "c2",
+            "speedup": 1,
+            "device": "d2",
+            "id": 1
           },
           "remainingExecutionTime": 0
         },
@@ -585,14 +930,16 @@
           "executionTime": 100000,
           "executionIntervals": [
             {
-              "startTime": 8750000,
-              "endTime": 8850000,
-              "core": "Default"
+              "core": "c2",
+              "endTime": 9000000,
+              "startTime": 8750000
             }
           ],
           "currentCore": {
-            "name": "Default",
-            "speedup": 1
+            "name": "c2",
+            "speedup": 1,
+            "device": "d2",
+            "id": 1
           },
           "remainingExecutionTime": 0
         },
@@ -605,14 +952,16 @@
           "executionTime": 100000,
           "executionIntervals": [
             {
-              "startTime": 9750000,
-              "endTime": 9850000,
-              "core": "Default"
+              "core": "c2",
+              "endTime": 10000000,
+              "startTime": 9750000
             }
           ],
           "currentCore": {
-            "name": "Default",
-            "speedup": 1
+            "name": "c2",
+            "speedup": 1,
+            "device": "d2",
+            "id": 1
           },
           "remainingExecutionTime": 0
         },
@@ -625,14 +974,16 @@
           "executionTime": 100000,
           "executionIntervals": [
             {
-              "startTime": 10750000,
-              "endTime": 10850000,
-              "core": "Default"
+              "core": "c2",
+              "endTime": 11000000,
+              "startTime": 10750000
             }
           ],
           "currentCore": {
-            "name": "Default",
-            "speedup": 1
+            "name": "c2",
+            "speedup": 1,
+            "device": "d2",
+            "id": 1
           },
           "remainingExecutionTime": 0
         },
@@ -645,14 +996,16 @@
           "executionTime": 100000,
           "executionIntervals": [
             {
-              "startTime": 11750000,
-              "endTime": 11850000,
-              "core": "Default"
+              "core": "c2",
+              "endTime": 12000000,
+              "startTime": 11750000
             }
           ],
           "currentCore": {
-            "name": "Default",
-            "speedup": 1
+            "name": "c2",
+            "speedup": 1,
+            "device": "d2",
+            "id": 1
           },
           "remainingExecutionTime": 0
         },
@@ -665,14 +1018,16 @@
           "executionTime": 100000,
           "executionIntervals": [
             {
-              "startTime": 12750000,
-              "endTime": 12850000,
-              "core": "Default"
+              "core": "c2",
+              "endTime": 13000000,
+              "startTime": 12750000
             }
           ],
           "currentCore": {
-            "name": "Default",
-            "speedup": 1
+            "name": "c2",
+            "speedup": 1,
+            "device": "d2",
+            "id": 1
           },
           "remainingExecutionTime": 0
         },
@@ -685,14 +1040,16 @@
           "executionTime": 100000,
           "executionIntervals": [
             {
-              "startTime": 13750000,
-              "endTime": 13850000,
-              "core": "Default"
+              "core": "c2",
+              "endTime": 14000000,
+              "startTime": 13750000
             }
           ],
           "currentCore": {
-            "name": "Default",
-            "speedup": 1
+            "name": "c2",
+            "speedup": 1,
+            "device": "d2",
+            "id": 1
           },
           "remainingExecutionTime": 0
         },
@@ -705,14 +1062,16 @@
           "executionTime": 100000,
           "executionIntervals": [
             {
-              "startTime": 14750000,
-              "endTime": 14850000,
-              "core": "Default"
+              "core": "c2",
+              "endTime": 15000000,
+              "startTime": 14750000
             }
           ],
           "currentCore": {
-            "name": "Default",
-            "speedup": 1
+            "name": "c2",
+            "speedup": 1,
+            "device": "d2",
+            "id": 1
           },
           "remainingExecutionTime": 0
         },
@@ -725,14 +1084,16 @@
           "executionTime": 100000,
           "executionIntervals": [
             {
-              "startTime": 15750000,
-              "endTime": 15850000,
-              "core": "Default"
+              "core": "c2",
+              "endTime": 16000000,
+              "startTime": 15750000
             }
           ],
           "currentCore": {
-            "name": "Default",
-            "speedup": 1
+            "name": "c2",
+            "speedup": 1,
+            "device": "d2",
+            "id": 1
           },
           "remainingExecutionTime": 0
         },
@@ -745,14 +1106,16 @@
           "executionTime": 100000,
           "executionIntervals": [
             {
-              "startTime": 16750000,
-              "endTime": 16850000,
-              "core": "Default"
+              "core": "c2",
+              "endTime": 17000000,
+              "startTime": 16750000
             }
           ],
           "currentCore": {
-            "name": "Default",
-            "speedup": 1
+            "name": "c2",
+            "speedup": 1,
+            "device": "d2",
+            "id": 1
           },
           "remainingExecutionTime": 0
         },
@@ -765,14 +1128,16 @@
           "executionTime": 100000,
           "executionIntervals": [
             {
-              "startTime": 17750000,
-              "endTime": 17850000,
-              "core": "Default"
+              "core": "c2",
+              "endTime": 18000000,
+              "startTime": 17750000
             }
           ],
           "currentCore": {
-            "name": "Default",
-            "speedup": 1
+            "name": "c2",
+            "speedup": 1,
+            "device": "d2",
+            "id": 1
           },
           "remainingExecutionTime": 0
         },
@@ -785,14 +1150,16 @@
           "executionTime": 100000,
           "executionIntervals": [
             {
-              "startTime": 18750000,
-              "endTime": 18850000,
-              "core": "Default"
+              "core": "c2",
+              "endTime": 19000000,
+              "startTime": 18750000
             }
           ],
           "currentCore": {
-            "name": "Default",
-            "speedup": 1
+            "name": "c2",
+            "speedup": 1,
+            "device": "d2",
+            "id": 1
           },
           "remainingExecutionTime": 0
         },
@@ -805,14 +1172,16 @@
           "executionTime": 100000,
           "executionIntervals": [
             {
-              "startTime": 19750000,
-              "endTime": 19850000,
-              "core": "Default"
+              "core": "c2",
+              "endTime": 20000000,
+              "startTime": 19750000
             }
           ],
           "currentCore": {
-            "name": "Default",
-            "speedup": 1
+            "name": "c2",
+            "speedup": 1,
+            "device": "d2",
+            "id": 1
           },
           "remainingExecutionTime": 0
         }
@@ -820,7 +1189,26 @@
       "executionTiming": "BCET"
     }
   ],
-  "NetworkDelayStore": [],
+  "NetworkDelayStore": [
+    {
+      "name": "d1-to-d2",
+      "source": "d1",
+      "dest": "d2",
+      "bcdt": 300000,
+      "acdt": 400000,
+      "wcdt": 500000,
+      "distribution": "Normal"
+    },
+    {
+      "name": "d2-to-d1",
+      "source": "d2",
+      "dest": "d1",
+      "bcdt": 300000,
+      "acdt": 400000,
+      "wcdt": 500000,
+      "distribution": "Normal"
+    }
+  ],
   "DeviceStore": [
     {
       "name": "d1",
@@ -829,8 +1217,8 @@
         {
           "protocol": "tcp",
           "bcdt": 200000,
-          "acdt": 500000,
-          "wcdt": 800000,
+          "acdt": 300000,
+          "wcdt": 400000,
           "distribution": "Normal"
         }
       ]
@@ -842,8 +1230,8 @@
         {
           "protocol": "tcp",
           "bcdt": 200000,
-          "acdt": 500000,
-          "wcdt": 800000,
+          "acdt": 300000,
+          "wcdt": 400000,
           "distribution": "Normal"
         }
       ]
@@ -853,6 +1241,7 @@
     {
       "name": "task_a",
       "type": "task",
+      "priority": null,
       "initialOffset": 0,
       "activationOffset": 200000,
       "duration": 4500000,
@@ -863,10 +1252,11 @@
       "outputs": [
         "out"
       ],
-      "wcet": 3000000,
-      "acet": 2500000,
-      "bcet": 2000000,
-      "distribution": "Normal"
+      "wcet": 100000,
+      "acet": 100000,
+      "bcet": 100000,
+      "distribution": "Normal",
+      "core": null
     },
     {
       "name": "task_b",
@@ -908,7 +1298,30 @@
       "distribution": "Weibull"
     }
   ],
-  "DependencyStore": [],
+  "DependencyStore": [
+    {
+      "name": "a",
+      "source": {
+        "task": "task_a",
+        "port": "out"
+      },
+      "destination": {
+        "task": "task_b",
+        "port": "in"
+      }
+    },
+    {
+      "name": "b",
+      "source": {
+        "task": "task_b",
+        "port": "out"
+      },
+      "destination": {
+        "task": "task_c",
+        "port": "in1"
+      }
+    }
+  ],
   "PluginParameters": {
     "Makespan": 20000000
   }
