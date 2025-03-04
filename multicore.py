@@ -1,22 +1,22 @@
 import math
 from pulp import PULP_CBC_CMD, LpProblem, LpMinimize, LpVariable, lpSum
 
+from min_core_usage import MinCoreUsage
+from min_e2e_mc import MinE2EMC
+
 class MultiCoreScheduler():
     solver = PULP_CBC_CMD(msg=True)
 
     def __init__(self):
-        self.prob = LpProblem("Multicore_Core_Scheduling", LpMinimize)
-        self.system = None
         self.tasks = None
         self.tasks_instances = None
         self.cores = None
         self.assigned = None
-        self.six_term_psi = None
         self.start_time = None
         self.end_time = None
     
-    def multicore_core_scheduler(self, system):
-        self.system = system
+    def multicore_core_scheduler(self, system, path):
+        prob = LpProblem("Multicore_Core_Scheduling", LpMinimize)
         taskPeriods = [task['period'] for task in system['EntityStore']]
         self.tasks = [task for task in system['EntityStore']]
 
@@ -25,7 +25,7 @@ class MultiCoreScheduler():
         schedulingWindow = math.ceil(makespan / hyperPeriod) * hyperPeriod
         N = schedulingWindow
 
-        self.tasks_instances = (self.create_task_instances(self.tasks, makespan)
+        self.tasks_instances = (self.create_task_instances(makespan)
             if not system['EntityInstancesStore']
             else [instance for instance in system['EntityInstancesStore']])
         
@@ -35,7 +35,7 @@ class MultiCoreScheduler():
             core['id'] = i
 
         # Variables
-        # 1.1 Variable for each task instance, and a core. (a_(i,j,k))
+        # 1.1 Variable for task instances, and their core assignment
         self.assigned = LpVariable.dicts("task_core",
                             ((instance['name'], value['instance'], core['name'])
                             for instance in self.tasks_instances for value in instance['value']
@@ -54,10 +54,6 @@ class MultiCoreScheduler():
                             for instance in self.tasks_instances for value in instance['value']),
                             lowBound=0, cat='Integer')
         
-        # 1.3 Variable to track if a core is being used. (u_j)
-        unused = LpVariable.dicts("u", ((core['name']) for core in self.cores), 
-                             lowBound=0, upBound=1, cat='Binary')
-        
         # ψ_(i,j,i',j')
         # The matrices are symmetrical, which is why only the half of it is being considered for optimisation purposes.
         self.four_term_psi = LpVariable.dicts("psi_4",
@@ -70,19 +66,20 @@ class MultiCoreScheduler():
                             lowBound=0, upBound=1, cat="Binary")
 
         # ψ_(i,j,k,i',j',k')
-        self.six_term_psi = LpVariable.dicts("psi_6",
+        six_term_psi = LpVariable.dicts("psi_6",
                             [(task1['name'], value1['instance'], core1['name'],
                             task2['name'], value2['instance'], core2['name'])
                             for core1 in self.cores
                             for core2 in self.cores
-                            for i, task1 in enumerate(self.tasks_instances[:-1])
-                            for task2 in self.tasks_instances[i+1:]
+                            for task1 in self.tasks_instances
+                            for task2 in self.tasks_instances
+                            if task1 != task2
                             for value1 in task1['value']
                             for value2 in task2['value']],
                             lowBound=0, upBound=1, cat="Binary")
         
         # b_(i,j,i',j')^task
-        bool_variable = LpVariable.dicts("b", 
+        bool_task = LpVariable.dicts("bool_task", 
                             [(task1['name'], value1['instance'],
                             task2['name'], value2['instance'])
                             for i, task1 in enumerate(self.tasks_instances[:-1])
@@ -95,12 +92,12 @@ class MultiCoreScheduler():
         # 2.1 A task instance can have exactly one core assigned to it. (From C1 - C17)
         for task in self.tasks_instances:
             for instance in task['value']:
-                self.prob += lpSum(self.assigned[(task['name'], instance['instance'], core['name'])] for core in self.cores) == 1
+                prob += lpSum(self.assigned[(task['name'], instance['instance'], core['name'])] for core in self.cores) == 1
 
         # 2.2 All task instances under one task should have the same core assigned to it. (From C18 - C31)
         for task in self.tasks_instances:
             for i in range(len(task['value']) - 1):
-                self.prob += lpSum(self.assigned[(task['name'], task['value'][i]['instance'], core['name'])] * core['id'] 
+                prob += lpSum(self.assigned[(task['name'], task['value'][i]['instance'], core['name'])] * core['id'] 
                               for core in self.cores) == lpSum(self.assigned[(task['name'], task['value'][i + 1]['instance'], core['name'])] * core['id'] 
                                                           for core in self.cores)
                 
@@ -108,7 +105,7 @@ class MultiCoreScheduler():
         for task in self.tasks_instances:
             for instance in task['value']:
                 instance_name = (task['name'], instance['instance'])
-                self.prob += self.start_time[instance_name] <= self.end_time[instance_name]
+                prob += self.start_time[instance_name] <= self.end_time[instance_name]
 
         # 2.4 A task' total execution time must be equal to the specified execution time. (From C49 - C82)
         for task in self.tasks_instances:
@@ -116,7 +113,7 @@ class MultiCoreScheduler():
             for instance in task['value']:
                 for core in self.cores:
                     instance_name = (task['name'], instance['instance'])
-                    self.prob += self.end_time[instance_name] - self.start_time[instance_name] == wcet
+                    prob += self.end_time[instance_name] - self.start_time[instance_name] == wcet
 
         # 2.5.1 A task's execution start time must be greater than or equal to its LET start time,
         # 2.5.2 A task's execution end time must be less than or equal to its LET end time. (From C83 - C150)
@@ -124,8 +121,8 @@ class MultiCoreScheduler():
             for instance in task['value']:
                 for core in self.cores:
                     instance_name = (task['name'], instance['instance'])
-                    self.prob += self.start_time[instance_name] >= instance['letStartTime']
-                    self.prob += self.end_time[instance_name] <= instance['letEndTime']
+                    prob += self.start_time[instance_name] >= instance['letStartTime']
+                    prob += self.end_time[instance_name] <= instance['letEndTime']
 
         # 2.6 Execution intervals for the task instances on the same core should not overlap.
         # 2.6.1 (From C151 - C790)
@@ -139,8 +136,8 @@ class MultiCoreScheduler():
                                 task_y = (self.tasks_instances[j]['name'], instance_j['instance'], core2['name'])
                                 task_pair = (task_x + task_y)
 
-                                self.prob += self.six_term_psi[task_pair] <= self.assigned[task_x]
-                                self.prob += self.six_term_psi[task_pair] <= self.assigned[task_y]
+                                prob += six_term_psi[task_pair] <= self.assigned[task_x]
+                                prob += six_term_psi[task_pair] <= self.assigned[task_y]
 
         # 2.6.2 (From C701 - C950)
         for i in range(len(self.tasks_instances) - 1):
@@ -149,8 +146,8 @@ class MultiCoreScheduler():
                     for instance_j in self.tasks_instances[j]['value']:
                         four_term = (self.tasks_instances[i]['name'], instance_i['instance'], self.tasks_instances[j]['name'], instance_j['instance'])
 
-                        self.prob += (self.four_term_psi[four_term] == 
-                                        lpSum(self.six_term_psi[self.tasks_instances[i]['name'], instance_i['instance'], core1['name'], 
+                        prob += (self.four_term_psi[four_term] == 
+                                        lpSum(six_term_psi[self.tasks_instances[i]['name'], instance_i['instance'], core1['name'], 
                                             self.tasks_instances[j]['name'], instance_j['instance'], core2['name']] 
                                             for core1 in self.cores
                                             for core2 in self.cores
@@ -165,114 +162,32 @@ class MultiCoreScheduler():
                         task_y = (self.tasks_instances[j]['name'], instance_j['instance'])
                         task_pair = (task_x + task_y)
 
-                        self.prob += self.end_time[task_x] - self.start_time[task_y] <= N * bool_variable[task_pair] + N * self.four_term_psi[task_pair]
-                        self.prob += self.end_time[task_y] - self.start_time[task_x] <= N - N * bool_variable[task_pair] + N * self.four_term_psi[task_pair]
-                            
-        # 8. If a task instance uses a core, the core is marked used. (Generated by ChatGPT) (From C1111 - C1144)
-        for core in self.cores:
-            for task in self.tasks_instances:
-                for instance in task['value']:
-                    self.prob += self.assigned[(task['name'], instance['instance'], core['name'])] <= unused[(core['name'])]
+                        prob += self.end_time[task_x] - self.start_time[task_y] <= N * bool_task[task_pair] + N * self.four_term_psi[task_pair]
+                        prob += self.end_time[task_y] - self.start_time[task_x] <= N - N * bool_task[task_pair] + N * self.four_term_psi[task_pair]
 
+        if path == '/min-core-usage':
+            objective = MinCoreUsage()
+            objective.min_core_usage(self.assigned, self.cores, self.tasks_instances, prob)
+        elif path == '/min-e2e-mc':
+            objective = MinE2EMC()
+            objective.min_e2e_mc(N, system, prob, six_term_psi, self)
 
-        objective = lpSum(unused[(core['name'])] for core in self.cores)
-        self.prob += objective, "Minimise Core Usage"   
+        # prob.solve()
 
-        self.prob.solve()
+        # self.update_schedule()
 
-        self.update_schedule()
-
-        schedule = { "EntityInstancesStore" : self.tasks_instances }
+        # schedule = { "EntityInstancesStore" : self.tasks_instances }
                         
-        for v in self.prob.variables():
-            print(f"{v.name} = {v.varValue}")
+        # for v in prob.variables():
+        #     print(f"{v.name} = {v.varValue}")
 
-        print(self.prob.sol_status)
+        # print(prob.sol_status)
 
-        return self.prob.sol_status, schedule
+        # return prob.sol_status, schedule
     
-    # def dependency_constraints(self):
-    #     devices = [(device['name'], delay['wcdt'])
-    #                for device in self.system['DeviceStore']
-    #                for delay in device['delays']]
-    #     networkDelays = [(networkDelay['name'], networkDelay['wcdt']) for networkDelay in self.system['NetworkDelayStore']]
-    #     dependencies = [dependency for dependency in self.system['DependencyStore'] 
-    #                     if 'system' not in dependency['source']['task'] 
-    #                     and 'system' not in dependency['destination']['task']]
-        
-    #     # Variable
-    #     # Dependency time
-    #     delay = LpVariable.dicts("delay",
-    #                             [(dependency['source']['task'], core1['name'], 
-    #                             dependency['destination']['task'], core2['name'])
-    #                             for core1 in self.cores
-    #                             for core2 in self.cores
-    #                             for dependency in dependencies],
-    #                             lowBound=0, cat='Integer')
-        
-    #     # Constraints
-    #     # TODO: Make it so it uses all the task instances (entire makespan)
-    #     for dependency in dependencies:
-    #         for core1 in self.cores:
-    #             for core2 in self.cores:
-    #                 sourceTaskInstances = next(task for task in self.tasks if task['name'] == dependency['source']['task'])
-    #                 destTaskInstances = next(task for task in self.tasks if task['name'] == dependency['destination']['task'])
-
-    #                 sourceDevice = next(core['device'] for core in self.cores if core['name'] == core1['name'])
-    #                 destDevice = next(core['device'] for core in self.cores if core['name'] == core2['name'])
-
-    #                 for i in range(len(destTaskInstances) - 1, -1, -1):
-    #                     destTaskInstance = destTaskInstances['value'][i]
-    #                     print(destTaskInstances['name'], destTaskInstance['instance'], destDevice)
-                        
-    #                     if (sourceDevice != destDevice):
-    #                         sourceDelay = next(device for device in devices if device[0] == sourceDevice)[1]
-    #                         destDelay = next(device for device in devices if device[0] == destDevice)[1]
-    #                         networkDelay = next(delay for delay in networkDelays if delay[0] == f'{sourceDevice}-to-{destDevice}')[1]
-    #                         totalDelay = sourceDelay + destDelay + networkDelay
-    #                         sourceTaskInstance = next((instance for instance in reversed(sourceTaskInstances['value']) if instance['letEndTime'] <= destTaskInstance['letStartTime'] - totalDelay), None)
-
-    #                         if (sourceTaskInstance):
-    #                             depDelay = destTaskInstance['letStartTime'] - sourceTaskInstance['letEndTime']
-                                
-                                # self.prob += LpVariable()
-
-                            # destStart = next(instance for instance in destTask['value'] if instance['letStartTime'] >= sourceEnd + totalDelay)['letStartTime']
-                            # depDelay = destStart - sourceEnd
-
-
-
-                    # # If cores are on different devices, the dependency will have additional transmission delays.
-                    # if (sourceDevice != destDevice):
-                    #     sourceDelay = next(device for device in devices if device[0] == sourceDevice)[1]
-                    #     destDelay = next(device for device in devices if device[0] == destDevice)[1]
-                    #     networkDelay = next(delay for delay in networkDelays if delay[0] == f'{sourceDevice}-to-{destDevice}')[1]
-                    #     totalDelay = sourceDelay + destDelay + networkDelay
-                    #     destStart = next(instance for instance in destTask['value'] if instance['letStartTime'] >= sourceEnd + totalDelay)['letStartTime']
-                    #     depDelay = destStart - sourceEnd
-                        
-                    #     # 2.7
-                    #     self.prob += delay[source, core1['name'], dest, core2['name']] == self.six_term_psi[source, 0, core1['name'], dest, 0, core2['name']] * depDelay
-
-                    # # If cores are on same devices, the dependency's delay will only be the time between a pair of tasks.
-                    # else:
-                    #     destStart = next(instance for instance in destTask['value'] if instance['letStartTime'] >= sourceEnd)['letStartTime']
-                    #     depDelay = destStart - sourceEnd
-                        
-                    #     # 2.8
-                    #     self.prob += delay[source, core1['name'], dest, core2['name']] == self.six_term_psi[source, 0, core1['name'], dest, 0, core2['name']] * depDelay
-
-        # # Objective
-        # objective = lpSum(delay[dependency['source']['task'], core1['name'], 
-        #                     dependency['destination']['task'], core2['name']]
-        #                     for core1 in self.cores
-        #                     for core2 in self.cores
-        #                     for dependency in dependencies)
-        # self.prob += objective, "Minimise Transmission Delay"
 
     def update_schedule(self):
         for task in self.tasks_instances:
-            print(task)
             for instance in task['value']:
                 for core in self.cores:
                     if self.assigned[(task['name'], instance['instance'], core['name'])].varValue == 1:
@@ -288,10 +203,11 @@ class MultiCoreScheduler():
                         instance['currentCore'] = core
                         instance['executionIntervals'] = execution_time
 
-    def create_task_instances(self, tasks, makespan):
+
+    def create_task_instances(self, makespan):
         task_instances = []
 
-        for task in tasks:
+        for task in self.tasks:
             instances = []
             number_of_instances = math.ceil((makespan - task['initialOffset']) / task['period'])
             
@@ -309,6 +225,7 @@ class MultiCoreScheduler():
         
         return task_instances
 
+
     def create_task_instance(self, task, index):
         periodStartTime = (index * task['period']) + task['initialOffset']
         periodEndTime = periodStartTime + task['period']
@@ -323,6 +240,7 @@ class MultiCoreScheduler():
             "letEndTime": letEndTime,
             "executionTime": task['wcet']
         }
-    
+
+
     def get_wcet(self, task_name):
         return next((task for task in self.tasks if task['name'] == task_name))['wcet']

@@ -29,7 +29,6 @@ from types import SimpleNamespace
 
 # Import PuLP constraint generator
 from PuLPWriter import PuLPWriter
-
 from multicore import MultiCoreScheduler
 
 
@@ -105,9 +104,9 @@ class Server(BaseHTTPRequestHandler):
             status = None
             if self.path and self.path == '/ilp':
                 status, schedule = lpScheduler(system)
-            if self.path and self.path == '/min-core-usage':
+            if self.path and self.path == '/min-core-usage' or '/min-e2e-mc':
                 scheduler = MultiCoreScheduler()
-                status, schedule = scheduler.multicore_core_scheduler(system)
+                status, schedule = scheduler.multicore_core_scheduler(system, self.path)
             
             if status == 0:
                 raise Exception("LetSynchronise system is unschedulable!")
