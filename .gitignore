@@ -9,8 +9,7 @@ gurobi.log
 schedule.json
 input_system.json
 .venv
-lp.txt
-lp1.txt
+*.txt
 .vscode
 /lp_solve_5.5
 /lp_solve_5.5.2.11_dev_ux64

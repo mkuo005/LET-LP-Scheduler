@@ -108,7 +108,7 @@ class Server(BaseHTTPRequestHandler):
                 scheduler = MultiCoreScheduler()
                 status, schedule = scheduler.multicore_core_scheduler(system, self.path)
             
-            if status == 0:
+            if status != 1:
                 raise Exception("LetSynchronise system is unschedulable!")
         except FileNotFoundError as error:
             traceback.print_exc()
