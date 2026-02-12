@@ -1,9 +1,9 @@
 """
-This program converts a LetSyncrhonise system model into a set of linear programming 
+This program converts a LetSyncrhonise system model into a set of linear programming
 constraints that can be solved to minimise the delays of task dependencies.
 
 See the following paper for the original ILP formulation:
-E. Yip and M. M. Y. Kuo. LetSynchronise: An Open-Source Framework for Analysing and 
+E. Yip and M. M. Y. Kuo. LetSynchronise: An Open-Source Framework for Analysing and
 Optimising Logical Execution Time Systems. CPS-IoT Week, 2023. Available online at
 https://dl.acm.org/doi/10.1145/3576914.3587500
 
@@ -12,7 +12,7 @@ The formulation in this implementation supports multicores as well.
 
 # Import web server libraries
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-import socketserver 
+import socketserver
 
 # Import the required libraries
 import sys
@@ -33,21 +33,22 @@ from multicore import MultiCoreScheduler
 
 
 Config = SimpleNamespace(
-    hostName = "localhost",
-    serverPort = 8181,
-    solveProg = "",
-    os = "",
-    exeSuffix = "",
-    lpFile = "system.lp",
-    objectiveVariable = "sumDependencyDelays",
-    individualLetInstanceParams = False,  # Each instance of a LET task can have different parameters
-    useOffSet = True, # Enable task offset
-    useHeterogeneousCores = True,
-    restrictTaskInstancesToSameCore = True,
-    objectiveType = PuLPWriter.OVERALL_END_TO_END,
+    hostName="localhost",
+    serverPort=8181,
+    solveProg="",
+    os="",
+    exeSuffix="",
+    lpFile="system.lp",
+    objectiveVariable="sumDependencyDelays",
+    individualLetInstanceParams=False,  # Each instance of a LET task can have different parameters
+    useOffSet=True,  # Enable task offset
+    useHeterogeneousCores=True,
+    restrictTaskInstancesToSameCore=True,
+    objectiveType=PuLPWriter.OVERALL_END_TO_END,
 )
 
-# Web server to handle requests from the LetSyncrhonise LP plugin, 
+
+# Web server to handle requests from the LetSyncrhonise LP plugin,
 # ls.plugin.goal.ilp.js
 # https://github.com/uniba-swt/LetSynchronise/blob/master/sources/plugins/ls.plugin.goal.ilp.js
 class Server(BaseHTTPRequestHandler):
@@ -58,29 +59,29 @@ class Server(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Headers", "X-Requested-With")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
-        
+
     def end_headers(self):
         # Allow cross origin headers
         self.send_header("Access-Control-Allow-Origin", "*")
         BaseHTTPRequestHandler.end_headers(self)
-        
+
     def _set_headers(self):
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.end_headers()
-        
+
     def _set_error_headers(self, message):
         self.send_response(501, message)
         self.send_header("Content-type", "text/html")
         self.end_headers()
-        
+
     def do_GET(self):
         self._set_headers()
         self.wfile.write(bytes("LET-LP-Scheduler", "utf-8"))
-        
+
     # FIXME: Add descriptive errors!!!
     def do_POST(self):
-        '''Reads POST request body'''
+        """Reads POST request body"""
         try:
             content_len = int(self.headers.get("content-length"))
             post_body = self.rfile.read(content_len)
@@ -88,26 +89,26 @@ class Server(BaseHTTPRequestHandler):
             traceback.print_exc()
             self._set_error_headers("LetSynchronise system model could not be read")
             return
-        
+
         try:
             system = json.loads(post_body.decode("utf-8"))
         except Exception:
             traceback.print_exc()
             self._set_error_headers("LetSynchronise system model could not be loaded")
             return
-        
+
         try:
             inputFile = open("input_system.json", "w+")
             inputFile.write(json.dumps(system, indent=2))
             inputFile.close()
             schedule = None
             status = None
-            if self.path and self.path == '/ilp':
+            if self.path and self.path == "/ilp":
                 status, schedule = lpScheduler(system)
-            if self.path and self.path == '/min-core-usage' or '/min-e2e-mc':
+            if self.path and self.path == "/min-core-usage" or "/min-e2e-mc":
                 scheduler = MultiCoreScheduler()
                 status, schedule = scheduler.multicore_core_scheduler(system, self.path)
-            
+
             if status != 1:
                 raise Exception("LetSynchronise system is unschedulable!")
         except FileNotFoundError as error:
@@ -116,9 +117,11 @@ class Server(BaseHTTPRequestHandler):
             return
         except Exception as error:
             traceback.print_exc()
-            self._set_error_headers(f"LetSynchronise system model could not be scheduled: {error}")
+            self._set_error_headers(
+                f"LetSynchronise system model could not be scheduled: {error}"
+            )
             return
-        
+
         self._set_headers()
         self.wfile.write(bytes(json.dumps(schedule), "utf-8"))
 
@@ -129,24 +132,26 @@ class Server(BaseHTTPRequestHandler):
 # LP Scheduler
 def lpScheduler(system):
     # Determine the hyper-period of the tasks
-    taskPeriods = [task['period'] for task in system['EntityStore']]
+    taskPeriods = [task["period"] for task in system["EntityStore"]]
     hyperPeriod = math.lcm(*taskPeriods)
     print(f"System hyper-period: {hyperPeriod} ns")
 
-    # The task schedule is analysed over a scheduling window, starting at 0 ns and 
+    # The task schedule is analysed over a scheduling window, starting at 0 ns and
     # ending at the makespan, rounded up to the next hyper-period.
-    makespan = system['PluginParameters']['Makespan']
+    makespan = system["PluginParameters"]["Makespan"]
     schedulingWindow = math.ceil(makespan / hyperPeriod) * hyperPeriod
     print(f"Scheduling window: {schedulingWindow} ns")
-    
+
     # A large constant, equal to the scheduling window, is needed when normalising logical disjunctions in LP constraints.
     lpLargeConstant = schedulingWindow
 
-    # Get all task dependencies that do not involve system inputs or outputs ("__system") 
+    # Get all task dependencies that do not involve system inputs or outputs ("__system")
     taskDependenciesList = set()
-    for dependency in system['DependencyStore']:
-        taskDependencyPair = f"{dependency['source']['task']}_{dependency['destination']['task']}"
-        if ("__system" in taskDependencyPair):
+    for dependency in system["DependencyStore"]:
+        taskDependencyPair = (
+            f"{dependency['source']['task']}_{dependency['destination']['task']}"
+        )
+        if "__system" in taskDependencyPair:
             continue
         taskDependenciesList.add(taskDependencyPair)
 
@@ -157,9 +162,9 @@ def lpScheduler(system):
     # Store the names of the dependency pair instances that we want to reduce their delays.
     delayVariableUpperBounds = {}
 
-    # Track the number of iterations to find solution    
+    # Track the number of iterations to find solution
     timesRan = 0
-    
+
     # Last summation of task dependency delays
     lastDelays = -1
 
@@ -168,20 +173,26 @@ def lpScheduler(system):
     for taskDependencyPair in taskDependenciesList:
         # Keep iterating LP solver until no further optimisations can be found
         lookingForBetterSolution = True
-        
+
         # List of LP constraint used to tighten the current dependency
         delayVariablesToTighten = []
 
-        
         while lookingForBetterSolution:
             print()
             print(f"Iteration {timesRan} ... {taskDependencyPair}")
             timesRan += 1
-            if (system.get("CoreStore") is None or len(system.get("CoreStore")) ==0 ):
-                system["CoreStore"] = [{'name': 'c1', 'speedup': 1}] #needed for old version of the exported file before multicore support
-           
+            if system.get("CoreStore") is None or len(system.get("CoreStore")) == 0:
+                system["CoreStore"] = [
+                    {"name": "c1", "speedup": 1}
+                ]  # needed for old version of the exported file before multicore support
+
             # Create LP writer for the selected solver
-            lp = PuLPWriter(Config.lpFile, Config.objectiveVariable, lpLargeConstant, Config.objectiveType)
+            lp = PuLPWriter(
+                Config.lpFile,
+                Config.objectiveVariable,
+                lpLargeConstant,
+                Config.objectiveType,
+            )
 
             # Create the objective to minimize task dependency delay
             lp.writeObjective()
@@ -189,12 +200,15 @@ def lpScheduler(system):
             # Equation 2
             # Encode the task instances over the scheduling window as LP constraints
             # Return all task instances within the scheduling window
-            allTaskInstances = lp.createTaskInstancesAsConstraints(system, schedulingWindow, system.get("CoreStore"), Config)
-            
+            allTaskInstances = lp.createTaskInstancesAsConstraints(
+                system, schedulingWindow, system.get("CoreStore"), Config
+            )
+
             # Equation 3
             # Create constraints that ensures no two tasks overlap (Single Core)
-            lp.createTaskExecutionConstraints(allTaskInstances.copy(), system.get("CoreStore"), Config)
-
+            lp.createTaskExecutionConstraints(
+                allTaskInstances.copy(), system.get("CoreStore"), Config
+            )
 
             # Equations 4 and 5
             # A dependency instance is simply a pair of source and destination task instances
@@ -207,18 +221,22 @@ def lpScheduler(system):
                 lp.writeComment("Tighten dependency delays")
                 for delayVariable, delayValue in delayVariableUpperBounds.items():
                     # Add constraints to tighten the current dependency pair to find better solutions.
-                    lp.writeDelayConstraints(delayVariable, delayValue, delayVariable in delayVariablesToTighten)
-            
+                    lp.writeDelayConstraints(
+                        delayVariable,
+                        delayValue,
+                        delayVariable in delayVariablesToTighten,
+                    )
+
             # Equation 6
             # Create objective equation has to be called after createTaskDependencyConstraints as the depenedency selection varaibles are needed to compute the summed end-to-end time
             lp.writeObjectiveEquation()
-            
+
             # Call the LP solver
             results = {}
-            
-            lp.solve(Config.solverProg) 
 
-            if (lp.prob.status == 1): 
+            lp.solve(Config.solverProg)
+
+            if lp.prob.status == 1:
                 result = lp.prob.sol_status
                 for v in lp.prob.variables():
                     results[str(v.name)] = v.varValue
@@ -226,10 +244,10 @@ def lpScheduler(system):
                 result = lp.prob.sol_status
 
             print("Results:")
-            if len(results) == 0 :
+            if len(results) == 0:
                 # If there are no results, then the problem is infeasible
                 print("LetSynchronise system is unschedulable!")
-                
+
                 # No need to try and tighten an infeasible problem
                 lookingForBetterSolution = False
                 # FIXME: Why remove all upper bounds? Why not just the upper bounds of taskDependencyPair?
@@ -237,123 +255,152 @@ def lpScheduler(system):
             else:
                 # Problem is feasible
                 print("LetSynchronise system is schedulable")
-                print(f"Current objective value: {results[Config.objectiveVariable]} ns")
+                print(
+                    f"Current objective value: {results[Config.objectiveVariable]} ns"
+                )
                 lastDelays = results[Config.objectiveVariable]
                 # Create the task schedule that is encoded in the LP solution
-                lastFeasibleSchedule = exportSchedule(system, lp, allTaskInstances, results, Config)
+                lastFeasibleSchedule = exportSchedule(
+                    system, lp, allTaskInstances, results, Config
+                )
 
-                # Determine upper bounds needed to tighten the dependency delays in the next iteration 
-                delayVariablesToTighten = lp.dependencyInstanceDelayVariables[taskDependencyPair]
-                delayVariableUpperBounds = tightenProblemSpace(lp, results)       
+                # Determine upper bounds needed to tighten the dependency delays in the next iteration
+                delayVariablesToTighten = lp.dependencyInstanceDelayVariables[
+                    taskDependencyPair
+                ]
+                delayVariableUpperBounds = tightenProblemSpace(lp, results)
             print("--------")
-                
+
             # If all instances of a LET task share the same parameters, then no more improvements are possible.
             if not Config.individualLetInstanceParams:
                 lookingForBetterSolution = False
 
         if not Config.individualLetInstanceParams:
-            break     
-        
+            break
+
     print(f"Iterated a total of {timesRan} times")
     print(f"Final objective value: {lastDelays} ns")
     return result, lastFeasibleSchedule
 
+
 def tightenProblemSpace(lp, results):
-    delayResults = {solutionVariable: solutionValue for solutionVariable, solutionValue in results.items() if "delay_" in solutionVariable}
-    
+    delayResults = {
+        solutionVariable: solutionValue
+        for solutionVariable, solutionValue in results.items()
+        if "delay_" in solutionVariable
+    }
+
     # Get the max delay of each task dependency instance
     maxDependencyDelays = {}
     for dependency, delayVariables in lp.dependencyInstanceDelayVariables.items():
         maxDependencyDelays[dependency] = -1
         for solutionVariable, solutionValue in delayResults.items():
             if solutionVariable in delayVariables:
-                maxDependencyDelays[dependency] = max(maxDependencyDelays[dependency], float(solutionValue))
-    
+                maxDependencyDelays[dependency] = max(
+                    maxDependencyDelays[dependency], float(solutionValue)
+                )
+
     # Get new upper bounds for each task dependency instance
     delayVariableUpperBounds = {}
-    for dependency, delayVariables in lp.dependencyInstanceDelayVariables.items():        
+    for dependency, delayVariables in lp.dependencyInstanceDelayVariables.items():
         for delayVariable in delayVariables:
-            delayVariableUpperBounds[delayVariable] = round(maxDependencyDelays[dependency])
-    
+            delayVariableUpperBounds[delayVariable] = round(
+                maxDependencyDelays[dependency]
+            )
+
     return delayVariableUpperBounds
 
+
 def exportSchedule(system, lp, allTaskInstances, results, Config):
-    schedule = {
-        "EntityInstancesStore" : []
-    }
-    
-    for task in system['EntityStore']:
-        if (task['name'] == "__system"):
+    schedule = {"EntityInstancesStore": []}
+
+    for task in system["EntityStore"]:
+        if task["name"] == "__system":
             continue
         initialOffset = 0
         if Config.useOffSet:
-            initialOffset = float(results[lp.taskOffset(task['name'])])
-            
+            initialOffset = float(results[lp.taskOffset(task["name"])])
+
         taskInstancesJson = {
-            "name": task['name'],
-            "initialOffset": initialOffset, #FIXME: when is this used in the GUI ?
-            "value": []
+            "name": task["name"],
+            "initialOffset": initialOffset,  # FIXME: when is this used in the GUI ?
+            "value": [],
         }
-        
-        for instance in allTaskInstances[task['name']]: 
-            index = len(taskInstancesJson['value'])
+
+        for instance in allTaskInstances[task["name"]]:
+            index = len(taskInstancesJson["value"])
             startTimeKey = lp.taskInstStartTime(instance)
             endTimeKey = lp.taskInstEndTime(instance)
 
             # FIXME: Unsafe rounding! End times could exceed original task period
             startTime = round(float(results[startTimeKey]))
             endTime = round(float(results[endTimeKey]))
-            period = int(task['period'])
-            wcet = int(task['wcet'])
-            
+            period = int(task["period"])
+            wcet = int(task["wcet"])
+
             allocatedCore = None
             for c in system["CoreStore"]:
-                if results[lp.taskInstCoreAllocation(lp.instVarName(task['name'],index), c["name"])] == 1:
+                if (
+                    results[
+                        lp.taskInstCoreAllocation(
+                            lp.instVarName(task["name"], index), c["name"]
+                        )
+                    ]
+                    == 1
+                ):
                     allocatedCore = c
                     break
             if allocatedCore == None:
                 print("Error task instance with no core allocation on export")
-                print("Task: "+task['name'])
-                print("Instance: "+instance)
-                raise Exception("Error task instance with no core allocation on export. Task: "+task['name']+" Instance: "+instance)
-            
+                print("Task: " + task["name"])
+                print("Instance: " + instance)
+                raise Exception(
+                    "Error task instance with no core allocation on export. Task: "
+                    + task["name"]
+                    + " Instance: "
+                    + instance
+                )
+
             taskInstance = {
-                "instance" : index,
-                "periodStartTime" : index * period,
-                "letStartTime" : startTime,
-                "letEndTime" : endTime,
-                "periodEndTime" : (index + 1) * period,
-                "executionTime": task['wcet'],
-                "executionIntervals": [ {
-                    "startTime": startTime,
-                    "endTime": startTime + math.ceil(wcet/allocatedCore["speedup"]),
-                    "core" : allocatedCore["name"]
-                } ],
-                "currentCore": allocatedCore
+                "instance": index,
+                "periodStartTime": index * period,
+                "letStartTime": startTime,
+                "letEndTime": endTime,
+                "periodEndTime": (index + 1) * period,
+                "executionTime": task["wcet"],
+                "executionIntervals": [
+                    {
+                        "startTime": startTime,
+                        "endTime": startTime
+                        + math.ceil(wcet / allocatedCore["speedup"]),
+                        "core": allocatedCore["name"],
+                    }
+                ],
+                "currentCore": allocatedCore,
             }
-            taskInstancesJson['value'].append(taskInstance)
-        schedule['EntityInstancesStore'].append(taskInstancesJson)
+            taskInstancesJson["value"].append(taskInstance)
+        schedule["EntityInstancesStore"].append(taskInstancesJson)
     return schedule
 
 
-
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     avaliableSolvers = pl.listSolvers(onlyAvailable=True)
     print("LET-LP-Scheduler")
     print("----------------")
-    print("Supported Solvers ['GLPK_CMD', 'PYGLPK', 'CPLEX_CMD', 'CPLEX_PY', 'CPLEX_DLL', 'GUROBI', 'GUROBI_CMD', 'MOSEK', 'XPRESS', 'PULP_CBC_CMD', 'COIN_CMD', 'COINMP_DLL', 'CHOCO_CMD', 'MIPCL_CMD', 'SCIP_CMD']")
-    print("Avaliable Solver on this PC: "+str(avaliableSolvers))
+    print(
+        "Supported Solvers ['GLPK_CMD', 'PYGLPK', 'CPLEX_CMD', 'CPLEX_PY', 'CPLEX_DLL', 'GUROBI', 'GUROBI_CMD', 'MOSEK', 'XPRESS', 'PULP_CBC_CMD', 'COIN_CMD', 'COINMP_DLL', 'CHOCO_CMD', 'MIPCL_CMD', 'SCIP_CMD']"
+    )
+    print("Avaliable Solver on this PC: " + str(avaliableSolvers))
     parser = argparse.ArgumentParser()
     parser.add_argument("--file", type=str, default="")
     parser.add_argument("--solver", choices=avaliableSolvers, type=str, required=True)
     args = parser.parse_args()
-    
-   # Set the OS and executable file suffix
+
+    # Set the OS and executable file suffix
     Config.os = sys.platform
     if Config.os == "win32":
         Config.exeSuffix = ".exe"
-    
+
     # Set the LP solver
     if args.solver in avaliableSolvers:
         Config.solverProg = args.solver
@@ -365,17 +412,21 @@ if __name__ == '__main__':
         try:
             file = open(args.file)
             system = json.load(file)
-            system['PluginParameters'] = {'Makespan': 1} #make makespan equal to hyperperiod
-            schedule = lpScheduler(system)
+            system["PluginParameters"] = {
+                "Makespan": 1
+            }  # make makespan equal to hyperperiod
+            # schedule = lpScheduler(system)
+            multicore = MultiCoreScheduler()
+            schedule = multicore.multicore_core_scheduler(system, "/min-e2e-mc")
             scheduleFile = open("schedule.json", "w+")
             scheduleFile.write(json.dumps(schedule, indent=2))
             scheduleFile.close()
-            
+
         except FileNotFoundError as e:
-            print(f"Unable to open \"{args.file}\"!")
+            print(f'Unable to open "{args.file}"!')
             print(e)
             traceback.print_exc()
-            
+
     else:
         webServer = ThreadingHTTPServer((Config.hostName, Config.serverPort), Server)
         print(f"Server started at http://{Config.hostName}:{Config.serverPort}")
@@ -385,7 +436,6 @@ if __name__ == '__main__':
             webServer.serve_forever()
         except KeyboardInterrupt:
             pass
-            
+
         webServer.server_close()
         print("Server stopped")
-    

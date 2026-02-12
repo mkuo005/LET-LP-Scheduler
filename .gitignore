@@ -10,6 +10,5 @@ schedule.json
 input_system.json
 .venv
 *.txt
-.vscode
 /lp_solve_5.5
 /lp_solve_5.5.2.11_dev_ux64

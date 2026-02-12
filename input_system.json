@@ -8,714 +8,22 @@
     {
       "name": "c2",
       "speedup": 1,
+      "device": "d1"
+    },
+    {
+      "name": "c3",
+      "speedup": 1,
       "device": "d2"
-    }
-  ],
-  "ConstraintInstancesStore": [],
-  "DependencyInstancesStore": [
-    {
-      "name": "a",
-      "value": [
-        {
-          "instance": 0,
-          "receiveEvent": {
-            "task": "task_a => task_b encapsulation delay",
-            "port": "in",
-            "taskInstance": 3,
-            "timestamp": 4700000
-          },
-          "sendEvent": {
-            "task": "task_a",
-            "port": "out",
-            "taskInstance": 0,
-            "timestamp": 4700000
-          }
-        },
-        {
-          "instance": 1,
-          "receiveEvent": {
-            "task": "task_a => task_b encapsulation delay",
-            "port": "in",
-            "taskInstance": 4,
-            "timestamp": 4700000
-          },
-          "sendEvent": {
-            "task": "task_a",
-            "port": "out",
-            "taskInstance": 0,
-            "timestamp": 4700000
-          }
-        },
-        {
-          "instance": 2,
-          "receiveEvent": {
-            "task": "task_a => task_b network delay",
-            "port": "in",
-            "taskInstance": 3,
-            "timestamp": 4984184
-          },
-          "sendEvent": {
-            "task": "task_a => task_b encapsulation delay",
-            "port": "out",
-            "taskInstance": 0,
-            "timestamp": 4984184
-          }
-        },
-        {
-          "instance": 3,
-          "receiveEvent": {
-            "task": "task_a => task_b network delay",
-            "port": "in",
-            "taskInstance": 4,
-            "timestamp": 5010878
-          },
-          "sendEvent": {
-            "task": "task_a => task_b encapsulation delay",
-            "port": "out",
-            "taskInstance": 0,
-            "timestamp": 5010878
-          }
-        },
-        {
-          "instance": 4,
-          "receiveEvent": {
-            "task": "task_a => task_b decapsulation delay",
-            "port": "in",
-            "taskInstance": 3,
-            "timestamp": 5378768
-          },
-          "sendEvent": {
-            "task": "task_a => task_b network delay",
-            "port": "out",
-            "taskInstance": 0,
-            "timestamp": 5378768
-          }
-        },
-        {
-          "instance": 5,
-          "receiveEvent": {
-            "task": "task_a => task_b decapsulation delay",
-            "port": "in",
-            "taskInstance": 4,
-            "timestamp": 5413903
-          },
-          "sendEvent": {
-            "task": "task_a => task_b network delay",
-            "port": "out",
-            "taskInstance": 0,
-            "timestamp": 5413903
-          }
-        },
-        {
-          "instance": 6,
-          "receiveEvent": {
-            "task": "task_b",
-            "port": "in",
-            "taskInstance": 3,
-            "timestamp": 6500000
-          },
-          "sendEvent": {
-            "task": "task_a => task_b decapsulation delay",
-            "port": "out",
-            "taskInstance": 0,
-            "timestamp": 5649564
-          }
-        },
-        {
-          "instance": 7,
-          "receiveEvent": {
-            "task": "task_b",
-            "port": "in",
-            "taskInstance": 4,
-            "timestamp": 8500000
-          },
-          "sendEvent": {
-            "task": "task_a => task_b decapsulation delay",
-            "port": "out",
-            "taskInstance": 0,
-            "timestamp": 5681020
-          }
-        }
-      ]
     },
     {
-      "name": "b",
-      "value": [
-        {
-          "instance": 0,
-          "receiveEvent": {
-            "task": "task_c",
-            "port": "in1",
-            "taskInstance": 1,
-            "timestamp": 1750000
-          },
-          "sendEvent": {
-            "task": "task_b",
-            "port": "out",
-            "taskInstance": 0,
-            "timestamp": 1500000
-          }
-        },
-        {
-          "instance": 1,
-          "receiveEvent": {
-            "task": "task_c",
-            "port": "in1",
-            "taskInstance": 2,
-            "timestamp": 2750000
-          },
-          "sendEvent": {
-            "task": "task_b",
-            "port": "out",
-            "taskInstance": 0,
-            "timestamp": 1500000
-          }
-        },
-        {
-          "instance": 2,
-          "receiveEvent": {
-            "task": "task_c",
-            "port": "in1",
-            "taskInstance": 3,
-            "timestamp": 3750000
-          },
-          "sendEvent": {
-            "task": "task_b",
-            "port": "out",
-            "taskInstance": 1,
-            "timestamp": 3500000
-          }
-        },
-        {
-          "instance": 3,
-          "receiveEvent": {
-            "task": "task_c",
-            "port": "in1",
-            "taskInstance": 4,
-            "timestamp": 4750000
-          },
-          "sendEvent": {
-            "task": "task_b",
-            "port": "out",
-            "taskInstance": 1,
-            "timestamp": 3500000
-          }
-        },
-        {
-          "instance": 4,
-          "receiveEvent": {
-            "task": "task_c",
-            "port": "in1",
-            "taskInstance": 5,
-            "timestamp": 5750000
-          },
-          "sendEvent": {
-            "task": "task_b",
-            "port": "out",
-            "taskInstance": 2,
-            "timestamp": 5500000
-          }
-        },
-        {
-          "instance": 5,
-          "receiveEvent": {
-            "task": "task_c",
-            "port": "in1",
-            "taskInstance": 6,
-            "timestamp": 6750000
-          },
-          "sendEvent": {
-            "task": "task_b",
-            "port": "out",
-            "taskInstance": 2,
-            "timestamp": 5500000
-          }
-        },
-        {
-          "instance": 6,
-          "receiveEvent": {
-            "task": "task_c",
-            "port": "in1",
-            "taskInstance": 7,
-            "timestamp": 7750000
-          },
-          "sendEvent": {
-            "task": "task_b",
-            "port": "out",
-            "taskInstance": 3,
-            "timestamp": 7500000
-          }
-        },
-        {
-          "instance": 7,
-          "receiveEvent": {
-            "task": "task_c",
-            "port": "in1",
-            "taskInstance": 8,
-            "timestamp": 8750000
-          },
-          "sendEvent": {
-            "task": "task_b",
-            "port": "out",
-            "taskInstance": 3,
-            "timestamp": 7500000
-          }
-        },
-        {
-          "instance": 8,
-          "receiveEvent": {
-            "task": "task_c",
-            "port": "in1",
-            "taskInstance": 9,
-            "timestamp": 9750000
-          },
-          "sendEvent": {
-            "task": "task_b",
-            "port": "out",
-            "taskInstance": 4,
-            "timestamp": 9500000
-          }
-        }
-      ]
-    }
-  ],
-  "EventChainInstanceStore": [],
-  "EntityInstancesStore": [
-    {
-      "name": "task_a",
-      "type": "task",
-      "initialOffset": 0,
-      "value": [
-        {
-          "instance": 0,
-          "periodStartTime": 0,
-          "periodEndTime": 5000000,
-          "letStartTime": 200000,
-          "letEndTime": 4700000,
-          "executionTime": 3000000,
-          "currentCore": {
-            "name": "c2",
-            "speedup": 1,
-            "device": "d2"
-          },
-          "executionIntervals": [
-            {
-              "core": "c2",
-              "endTime": 3200000,
-              "startTime": 200000
-            }
-          ]
-        },
-        {
-          "instance": 1,
-          "periodStartTime": 5000000,
-          "periodEndTime": 10000000,
-          "letStartTime": 5200000,
-          "letEndTime": 9700000,
-          "executionTime": 3000000,
-          "currentCore": {
-            "name": "c2",
-            "speedup": 1,
-            "device": "d2"
-          },
-          "executionIntervals": [
-            {
-              "core": "c2",
-              "endTime": 8200000,
-              "startTime": 5200000
-            }
-          ]
-        }
-      ]
+      "name": "c4",
+      "speedup": 1,
+      "device": "d2"
     },
     {
-      "name": "task_a => task_b decapsulation delay",
-      "type": "decapsulation",
-      "dependency": "a",
-      "value": [
-        {
-          "instance": 0,
-          "letStartTime": 5378768,
-          "letEndTime": 5649564,
-          "executionTime": 270796,
-          "sourceDevice": "d2",
-          "destinationDevice": "d1",
-          "dependency": "a"
-        },
-        {
-          "instance": 1,
-          "letStartTime": 5413903,
-          "letEndTime": 5681020,
-          "executionTime": 267117,
-          "sourceDevice": "d2",
-          "destinationDevice": "d1",
-          "dependency": "a"
-        }
-      ]
-    },
-    {
-      "name": "task_a => task_b encapsulation delay",
-      "type": "encapsulation",
-      "dependency": "a",
-      "value": [
-        {
-          "instance": 0,
-          "letStartTime": 4700000,
-          "letEndTime": 4984184,
-          "executionTime": 284184,
-          "sourceDevice": "d2",
-          "destinationDevice": "d1",
-          "dependency": "a"
-        },
-        {
-          "instance": 1,
-          "letStartTime": 4700000,
-          "letEndTime": 5010878,
-          "executionTime": 310878,
-          "sourceDevice": "d2",
-          "destinationDevice": "d1",
-          "dependency": "a"
-        }
-      ]
-    },
-    {
-      "name": "task_a => task_b network delay",
-      "type": "network",
-      "dependency": "a",
-      "value": [
-        {
-          "instance": 0,
-          "letStartTime": 4984184,
-          "letEndTime": 5378768,
-          "executionTime": 394584,
-          "sourceDevice": "d2",
-          "destinationDevice": "d1",
-          "dependency": "a"
-        },
-        {
-          "instance": 1,
-          "letStartTime": 5010878,
-          "letEndTime": 5413903,
-          "executionTime": 403025,
-          "sourceDevice": "d2",
-          "destinationDevice": "d1",
-          "dependency": "a"
-        }
-      ]
-    },
-    {
-      "name": "task_b",
-      "type": "task",
-      "initialOffset": 0,
-      "value": [
-        {
-          "instance": 0,
-          "periodStartTime": 0,
-          "periodEndTime": 2000000,
-          "letStartTime": 500000,
-          "letEndTime": 1500000,
-          "executionTime": 500000,
-          "currentCore": {
-            "name": "c1",
-            "speedup": 1,
-            "device": "d1"
-          },
-          "executionIntervals": [
-            {
-              "core": "c1",
-              "endTime": 1500000,
-              "startTime": 1000000
-            }
-          ]
-        },
-        {
-          "instance": 1,
-          "periodStartTime": 2000000,
-          "periodEndTime": 4000000,
-          "letStartTime": 2500000,
-          "letEndTime": 3500000,
-          "executionTime": 500000,
-          "currentCore": {
-            "name": "c1",
-            "speedup": 1,
-            "device": "d1"
-          },
-          "executionIntervals": [
-            {
-              "core": "c1",
-              "endTime": 3500000,
-              "startTime": 3000000
-            }
-          ]
-        },
-        {
-          "instance": 2,
-          "periodStartTime": 4000000,
-          "periodEndTime": 6000000,
-          "letStartTime": 4500000,
-          "letEndTime": 5500000,
-          "executionTime": 500000,
-          "currentCore": {
-            "name": "c1",
-            "speedup": 1,
-            "device": "d1"
-          },
-          "executionIntervals": [
-            {
-              "core": "c1",
-              "endTime": 5500000,
-              "startTime": 5000000
-            }
-          ]
-        },
-        {
-          "instance": 3,
-          "periodStartTime": 6000000,
-          "periodEndTime": 8000000,
-          "letStartTime": 6500000,
-          "letEndTime": 7500000,
-          "executionTime": 500000,
-          "currentCore": {
-            "name": "c1",
-            "speedup": 1,
-            "device": "d1"
-          },
-          "executionIntervals": [
-            {
-              "core": "c1",
-              "endTime": 7500000,
-              "startTime": 7000000
-            }
-          ]
-        },
-        {
-          "instance": 4,
-          "periodStartTime": 8000000,
-          "periodEndTime": 10000000,
-          "letStartTime": 8500000,
-          "letEndTime": 9500000,
-          "executionTime": 500000,
-          "currentCore": {
-            "name": "c1",
-            "speedup": 1,
-            "device": "d1"
-          },
-          "executionIntervals": [
-            {
-              "core": "c1",
-              "endTime": 9500000,
-              "startTime": 9000000
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "name": "task_c",
-      "type": "task",
-      "initialOffset": 750000,
-      "value": [
-        {
-          "instance": 0,
-          "periodStartTime": 750000,
-          "periodEndTime": 1750000,
-          "letStartTime": 750000,
-          "letEndTime": 1150000,
-          "executionTime": 250000,
-          "currentCore": {
-            "name": "c1",
-            "speedup": 1,
-            "device": "d1"
-          },
-          "executionIntervals": [
-            {
-              "core": "c1",
-              "endTime": 1000000,
-              "startTime": 750000
-            }
-          ]
-        },
-        {
-          "instance": 1,
-          "periodStartTime": 1750000,
-          "periodEndTime": 2750000,
-          "letStartTime": 1750000,
-          "letEndTime": 2150000,
-          "executionTime": 250000,
-          "currentCore": {
-            "name": "c1",
-            "speedup": 1,
-            "device": "d1"
-          },
-          "executionIntervals": [
-            {
-              "core": "c1",
-              "endTime": 2000000,
-              "startTime": 1750000
-            }
-          ]
-        },
-        {
-          "instance": 2,
-          "periodStartTime": 2750000,
-          "periodEndTime": 3750000,
-          "letStartTime": 2750000,
-          "letEndTime": 3150000,
-          "executionTime": 250000,
-          "currentCore": {
-            "name": "c1",
-            "speedup": 1,
-            "device": "d1"
-          },
-          "executionIntervals": [
-            {
-              "core": "c1",
-              "endTime": 3000000,
-              "startTime": 2750000
-            }
-          ]
-        },
-        {
-          "instance": 3,
-          "periodStartTime": 3750000,
-          "periodEndTime": 4750000,
-          "letStartTime": 3750000,
-          "letEndTime": 4150000,
-          "executionTime": 250000,
-          "currentCore": {
-            "name": "c1",
-            "speedup": 1,
-            "device": "d1"
-          },
-          "executionIntervals": [
-            {
-              "core": "c1",
-              "endTime": 4000000,
-              "startTime": 3750000
-            }
-          ]
-        },
-        {
-          "instance": 4,
-          "periodStartTime": 4750000,
-          "periodEndTime": 5750000,
-          "letStartTime": 4750000,
-          "letEndTime": 5150000,
-          "executionTime": 250000,
-          "currentCore": {
-            "name": "c1",
-            "speedup": 1,
-            "device": "d1"
-          },
-          "executionIntervals": [
-            {
-              "core": "c1",
-              "endTime": 5000000,
-              "startTime": 4750000
-            }
-          ]
-        },
-        {
-          "instance": 5,
-          "periodStartTime": 5750000,
-          "periodEndTime": 6750000,
-          "letStartTime": 5750000,
-          "letEndTime": 6150000,
-          "executionTime": 250000,
-          "currentCore": {
-            "name": "c1",
-            "speedup": 1,
-            "device": "d1"
-          },
-          "executionIntervals": [
-            {
-              "core": "c1",
-              "endTime": 6000000,
-              "startTime": 5750000
-            }
-          ]
-        },
-        {
-          "instance": 6,
-          "periodStartTime": 6750000,
-          "periodEndTime": 7750000,
-          "letStartTime": 6750000,
-          "letEndTime": 7150000,
-          "executionTime": 250000,
-          "currentCore": {
-            "name": "c1",
-            "speedup": 1,
-            "device": "d1"
-          },
-          "executionIntervals": [
-            {
-              "core": "c1",
-              "endTime": 7000000,
-              "startTime": 6750000
-            }
-          ]
-        },
-        {
-          "instance": 7,
-          "periodStartTime": 7750000,
-          "periodEndTime": 8750000,
-          "letStartTime": 7750000,
-          "letEndTime": 8150000,
-          "executionTime": 250000,
-          "currentCore": {
-            "name": "c1",
-            "speedup": 1,
-            "device": "d1"
-          },
-          "executionIntervals": [
-            {
-              "core": "c1",
-              "endTime": 8000000,
-              "startTime": 7750000
-            }
-          ]
-        },
-        {
-          "instance": 8,
-          "periodStartTime": 8750000,
-          "periodEndTime": 9750000,
-          "letStartTime": 8750000,
-          "letEndTime": 9150000,
-          "executionTime": 250000,
-          "currentCore": {
-            "name": "c1",
-            "speedup": 1,
-            "device": "d1"
-          },
-          "executionIntervals": [
-            {
-              "core": "c1",
-              "endTime": 9000000,
-              "startTime": 8750000
-            }
-          ]
-        },
-        {
-          "instance": 9,
-          "periodStartTime": 9750000,
-          "periodEndTime": 10750000,
-          "letStartTime": 9750000,
-          "letEndTime": 10150000,
-          "executionTime": 250000,
-          "currentCore": {
-            "name": "c1",
-            "speedup": 1,
-            "device": "d1"
-          },
-          "executionIntervals": [
-            {
-              "core": "c1",
-              "endTime": 10000000,
-              "startTime": 9750000
-            }
-          ]
-        }
-      ]
+      "name": "c5",
+      "speedup": 1,
+      "device": "d1"
     }
   ],
   "DeviceStore": [
@@ -726,8 +34,8 @@
         {
           "protocol": "tcp",
           "bcdt": 200000,
-          "acdt": 300000,
-          "wcdt": 400000,
+          "acdt": 200000,
+          "wcdt": 200000,
           "distribution": "Normal"
         }
       ]
@@ -739,8 +47,8 @@
         {
           "protocol": "tcp",
           "bcdt": 200000,
-          "acdt": 300000,
-          "wcdt": 400000,
+          "acdt": 200000,
+          "wcdt": 200000,
           "distribution": "Normal"
         }
       ]
@@ -752,8 +60,8 @@
       "source": "d1",
       "dest": "d2",
       "bcdt": 300000,
-      "acdt": 400000,
-      "wcdt": 500000,
+      "acdt": 300000,
+      "wcdt": 300000,
       "distribution": "Normal"
     },
     {
@@ -761,95 +69,293 @@
       "source": "d2",
       "dest": "d1",
       "bcdt": 300000,
-      "acdt": 400000,
-      "wcdt": 500000,
+      "acdt": 300000,
+      "wcdt": 300000,
       "distribution": "Normal"
     }
   ],
   "EntityStore": [
     {
-      "name": "task_a",
+      "name": "t1",
       "type": "task",
-      "initialOffset": 0,
-      "activationOffset": 200000,
-      "duration": 4500000,
-      "period": 5000000,
+      "acet": 1489158,
+      "bcet": 1489158,
+      "wcet": 1489158,
+      "core": null,
+      "distribution": "Normal",
       "inputs": [
-        "in"
+        "in1"
       ],
       "outputs": [
-        "out"
+        "out1"
       ],
-      "wcet": 3000000,
-      "acet": 2500000,
-      "bcet": 2000000,
-      "distribution": "Normal"
-    },
-    {
-      "name": "task_b",
-      "type": "task",
-      "priority": 1,
-      "initialOffset": 0,
-      "activationOffset": 500000,
-      "duration": 1000000,
-      "period": 2000000,
-      "inputs": [
-        "in"
-      ],
-      "outputs": [
-        "out"
-      ],
-      "wcet": 500000,
-      "acet": 400000,
-      "bcet": 300000,
-      "distribution": "Uniform"
-    },
-    {
-      "name": "task_c",
-      "type": "task",
-      "priority": 3,
-      "initialOffset": 750000,
+      "priority": null,
       "activationOffset": 0,
-      "duration": 400000,
-      "period": 1000000,
+      "initialOffset": 1149950,
+      "period": 10000000,
+      "duration": 2612496
+    },
+    {
+      "name": "t10",
+      "type": "task",
+      "acet": 1526506,
+      "bcet": 1526506,
+      "wcet": 1526506,
+      "core": null,
+      "distribution": "Normal",
       "inputs": [
-        "in1",
-        "in2"
+        "in1"
       ],
       "outputs": [
-        "out"
+        "out1"
       ],
-      "wcet": 250000,
-      "acet": 175000,
-      "bcet": 100000,
-      "distribution": "Weibull"
+      "priority": null,
+      "activationOffset": 0,
+      "initialOffset": 765254,
+      "period": 5000000,
+      "duration": 2488843
+    },
+    {
+      "name": "t2",
+      "type": "task",
+      "acet": 1468795,
+      "bcet": 1468795,
+      "wcet": 1468795,
+      "core": null,
+      "distribution": "Normal",
+      "inputs": [
+        "in1"
+      ],
+      "outputs": [
+        "out1"
+      ],
+      "priority": null,
+      "activationOffset": 0,
+      "initialOffset": 767663,
+      "period": 10000000,
+      "duration": 2339608
+    },
+    {
+      "name": "t3",
+      "type": "task",
+      "acet": 1716440,
+      "bcet": 1716440,
+      "wcet": 1716440,
+      "core": null,
+      "distribution": "Normal",
+      "inputs": [
+        "in1"
+      ],
+      "outputs": [
+        "out1"
+      ],
+      "priority": null,
+      "activationOffset": 0,
+      "initialOffset": 1148427,
+      "period": 10000000,
+      "duration": 2478420
+    },
+    {
+      "name": "t4",
+      "type": "task",
+      "acet": 1476906,
+      "bcet": 1476906,
+      "wcet": 1476906,
+      "core": null,
+      "distribution": "Normal",
+      "inputs": [
+        "in1"
+      ],
+      "outputs": [
+        "out1"
+      ],
+      "priority": null,
+      "activationOffset": 0,
+      "initialOffset": 1249438,
+      "period": 10000000,
+      "duration": 2240513
+    },
+    {
+      "name": "t5",
+      "type": "task",
+      "acet": 1450676,
+      "bcet": 1450676,
+      "wcet": 1450676,
+      "core": null,
+      "distribution": "Normal",
+      "inputs": [
+        "in1"
+      ],
+      "outputs": [
+        "out1"
+      ],
+      "priority": null,
+      "activationOffset": 0,
+      "initialOffset": 749570,
+      "period": 5000000,
+      "duration": 2441907
+    },
+    {
+      "name": "t6",
+      "type": "task",
+      "acet": 1621374,
+      "bcet": 1621374,
+      "wcet": 1621374,
+      "core": null,
+      "distribution": "Normal",
+      "inputs": [
+        "in1"
+      ],
+      "outputs": [
+        "out1"
+      ],
+      "priority": null,
+      "activationOffset": 0,
+      "initialOffset": 1175924,
+      "period": 10000000,
+      "duration": 2433838
+    },
+    {
+      "name": "t7",
+      "type": "task",
+      "acet": 1625448,
+      "bcet": 1625448,
+      "wcet": 1625448,
+      "core": null,
+      "distribution": "Normal",
+      "inputs": [
+        "in1"
+      ],
+      "outputs": [
+        "out1"
+      ],
+      "priority": null,
+      "activationOffset": 0,
+      "initialOffset": 602873,
+      "period": 5000000,
+      "duration": 2591205
+    },
+    {
+      "name": "t8",
+      "type": "task",
+      "acet": 1627813,
+      "bcet": 1627813,
+      "wcet": 1627813,
+      "core": null,
+      "distribution": "Normal",
+      "inputs": [
+        "in1"
+      ],
+      "outputs": [
+        "out1"
+      ],
+      "priority": null,
+      "activationOffset": 0,
+      "initialOffset": 857104,
+      "period": 10000000,
+      "duration": 2485581
+    },
+    {
+      "name": "t9",
+      "type": "task",
+      "acet": 1516534,
+      "bcet": 1516534,
+      "wcet": 1516534,
+      "core": null,
+      "distribution": "Normal",
+      "inputs": [
+        "in1"
+      ],
+      "outputs": [
+        "out1"
+      ],
+      "priority": null,
+      "activationOffset": 0,
+      "initialOffset": 708992,
+      "period": 10000000,
+      "duration": 2420553
     }
   ],
   "DependencyStore": [
     {
-      "name": "a",
+      "name": "dep_1-to-10",
       "source": {
-        "task": "task_a",
-        "port": "out"
+        "port": "out1",
+        "task": "t1"
       },
       "destination": {
-        "task": "task_b",
-        "port": "in"
+        "port": "in1",
+        "task": "t9"
       }
     },
     {
-      "name": "b",
+      "name": "dep_10-to-6",
       "source": {
-        "task": "task_b",
-        "port": "out"
+        "port": "out1",
+        "task": "t9"
       },
       "destination": {
-        "task": "task_c",
-        "port": "in1"
+        "port": "in1",
+        "task": "t5"
+      }
+    },
+    {
+      "name": "dep_2-to-8",
+      "source": {
+        "port": "out1",
+        "task": "t10"
+      },
+      "destination": {
+        "port": "in1",
+        "task": "t7"
+      }
+    },
+    {
+      "name": "dep_3-to-6",
+      "source": {
+        "port": "out1",
+        "task": "t2"
+      },
+      "destination": {
+        "port": "in1",
+        "task": "t5"
+      }
+    },
+    {
+      "name": "dep_5-to-7",
+      "source": {
+        "port": "out1",
+        "task": "t4"
+      },
+      "destination": {
+        "port": "in1",
+        "task": "t6"
+      }
+    },
+    {
+      "name": "dep_9-to-3",
+      "source": {
+        "port": "out1",
+        "task": "t8"
+      },
+      "destination": {
+        "port": "in1",
+        "task": "t2"
+      }
+    },
+    {
+      "name": "dep_9-to-8",
+      "source": {
+        "port": "out1",
+        "task": "t8"
+      },
+      "destination": {
+        "port": "in1",
+        "task": "t7"
       }
     }
   ],
   "PluginParameters": {
-    "Makespan": 10000000
+    "Makespan": 20000000
   }
 }
