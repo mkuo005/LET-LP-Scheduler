@@ -1,9 +1,8 @@
 import math
-from pulp import LpProblem, LpMinimize, LpVariable, lpSum, GUROBI_CMD
+from pulp import LpProblem, LpMinimize, LpVariable, lpSum, getSolver
 
 from min_core_usage import MinCoreUsage
-from min_e2e_mc import MinE2EMC
-
+from min_e2e_mc import MinE2E
 
 class MultiCoreScheduler:
 
@@ -15,237 +14,181 @@ class MultiCoreScheduler:
         self.exec_start_vars = None
         self.exec_end_vars = None
 
-    def multicore_core_scheduler(self, system, path):
-        prob = LpProblem("Multicore_Core_Scheduling", LpMinimize)
+    def multicore_core_scheduler(self, system, path, Config):
+        prob = LpProblem(f"Multicore_Core_Scheduling{path}", LpMinimize)
         taskPeriods = [task["period"] for task in system["EntityStore"]]
         taskOffsets = [task["initialOffset"] for task in system["EntityStore"]]
-        wcdts = [device["delays"][0]["wcdt"] for device in system["DeviceStore"]]
+        wcdts = [next(iter(device["delays"].values()))["wcdt"] for device in system["DeviceStore"]]
         networkDelays = [delay["wcdt"] for delay in system["NetworkDelayStore"]]
         tasks = [task for task in system["EntityStore"]]
         self.cores = [core for core in system["CoreStore"]]
         print(wcdts)
 
-        # hyperPeriod = math.lcm(*taskPeriods)
-        # makespan = system['PluginParameters']['Makespan']
-        # schedulingWindow = math.ceil(makespan / hyperPeriod) * hyperPeriod
-        # N = schedulingWindow
-
         hyperPeriod = math.lcm(*taskPeriods)
         hyperoffset = max(taskOffsets)
-        maxWCDT = max(wcdts)
-        maxNetDelay = max(networkDelays)
-        N = hyperPeriod + hyperoffset + maxNetDelay
-        print(hyperPeriod)
-        print("Big N", N)
+        hyperDelay = 2 * max(wcdts) + max(networkDelays)    # Over-approximation
+        print(f"Hyper-period: {hyperPeriod}")
 
-        self.formatted_tasks = self.format_tasks(
-            tasks, system.get("DependencyStore", None)
-        )
+        # The task schedule is analysed over a scheduling window (makespan) such that 
+        # all dependencies are satisfied at least once
+        makespan = system["PluginParameters"]["Makespan"]
+        schedulingWindow = (2 + math.ceil(hyperDelay / hyperPeriod)) * hyperPeriod + hyperoffset
+        schedulingWindow = max(schedulingWindow, makespan)
+        N = 2 * schedulingWindow
+        print(f"Scheduling window: {schedulingWindow} ns")
+        print(f"Big N: {N}")
 
-        print("formatted tasks")
+        print("Formatted tasks")
+        self.formatted_tasks = self.format_tasks(tasks, system.get("DependencyStore", None))
         for task in self.formatted_tasks:
             print(task)
-        self.tasks_instances = self.create_task_instances(hyperPeriod, tasks, N)
+        
+        self.tasks_instances = self.create_task_instances(schedulingWindow, tasks, N)
         print("task instances")
         for instances in self.tasks_instances:
             for instance in instances["value"]:
                 print(instance)
 
+        # # # # # # # # # # # # #
         # Variables
-        # Variable for task instances, and their core assignment
+
+        # assigned_(task,core)
+        # Variable for task instances, and their core assignment. 
         self.assigned_vars = LpVariable.dicts(
             "assigned",
-            (
-                (instance["name"], core["name"])
-                for instance in self.tasks_instances
-                for core in self.cores
-            ),
+            [f"{instance['name']},{core['name']}" for instance in self.tasks_instances for core in self.cores],
             lowBound=0,
             upBound=1,
             cat="Binary",
         )
 
-        # Variable for execution start time for each instance. (s_(i,j))
+        # start_(task,instance)
+        # Variable for execution start time for each instance. 
         self.exec_start_vars = LpVariable.dicts(
             "start",
-            (
-                (instance["name"], value["instance"])
-                for instance in self.tasks_instances
-                for value in instance["value"]
-            ),
+            [f"{instance['name']},{value['instance']}" for instance in self.tasks_instances for value in instance["value"]],
             lowBound=0,
             cat="Integer",
         )
 
-        # Variable for execution end time for each instance. (e_(i,j))
+        # end_(task,instance)
+        # Variable for execution end time for each instance.
         self.exec_end_vars = LpVariable.dicts(
             "end",
-            (
-                (instance["name"], value["instance"])
-                for instance in self.tasks_instances
-                for value in instance["value"]
-            ),
+            [f"{instance['name']},{value['instance']}" for instance in self.tasks_instances for value in instance["value"]],
             lowBound=0,
             cat="Integer",
         )
 
-        # ψ_(x,y)^core
-        # The matrices are symmetrical, which is why only the half of it is being considered for optimisation purposes.
+        # psi_tasks_(task_x,task_y)
+        # Variable for whether two tasks are allocated to different cores.
+        # TODO: The matrices are symmetrical, so only half of it is needed for optimisation purposes.
         psi_tasks_vars = LpVariable.dicts(
             "psi_tasks",
-            [
-                (task1["name"], task2["name"])
-                for task1 in tasks
-                for task2 in tasks
-                if task1 != task2
-            ],
+            [f"{task1['name']},{task2['name']}" for task1 in tasks for task2 in tasks if task1 != task2],
             lowBound=0,
             upBound=1,
             cat="Binary",
         )
 
-        # ψ_(x,k,y,l)^core
+        # psi_task_core_(task_x,core_k,task_y,core_l)
+        # Variable for the possible pairings of tasks to cores.
+        # TODO: The matrices are symmetrical, so only half of it is needed for optimisation purposes.
         psi_task_core_vars = LpVariable.dicts(
             "psi_task_core",
             [
-                (task1["name"], core1["name"], task2["name"], core2["name"])
-                for core1 in self.cores
-                for core2 in self.cores
-                for task1 in self.tasks_instances
-                for task2 in self.tasks_instances
-                if task1 != task2
+                f"{task1['name']},{core1['name']},{task2['name']},{core2['name']}"
+                for core1 in self.cores for core2 in self.cores
+                for task1 in self.tasks_instances for task2 in self.tasks_instances if task1 != task2
             ],
             lowBound=0,
             upBound=1,
             cat="Binary",
         )
 
-        # b_(x,i,y,j)^task
+        # bool_task_(task_x,instance_i,task_y,instance_j)
+        # Variable for whether task x executes sequentially after task y.
         bool_task_vars = LpVariable.dicts(
             "bool_task",
             [
-                (task1["name"], value1["instance"], task2["name"], value2["instance"])
-                for task1 in self.tasks_instances
-                for task2 in self.tasks_instances
-                if task1 != task2
-                for value1 in task1["value"]
-                for value2 in task2["value"]
+                f"{task1['name']},{value1['instance']},{task2['name']},{value2['instance']}"
+                for task1 in self.tasks_instances for task2 in self.tasks_instances if task1 != task2
+                for value1 in task1["value"] for value2 in task2["value"]
             ],
             lowBound=0,
             upBound=1,
             cat="Binary",
         )
 
-        # Constraint
-        # 1. A task instance can have exactly one core assigned to it. (From C1 - C17)
-        for task in self.tasks_instances:
-            prob += (
-                lpSum(
-                    self.assigned_vars[(task["name"], core["name"])]
-                    for core in self.cores
-                )
-                == 1
-            )
+        # # # # # # # # # # # # #
+        # Constraints
 
-        # 2b. A task' total execution time must be equal to the specified execution time. (From C49 - C82)
-        # 2c. A task's execution start time must be greater than or equal to its LET start time,
-        # 2d. A task's execution end time must be less than or equal to its LET end time. (From C83 - C150)
+        # 2a. A task's total execution time must be equal to the specified execution time.
+        # 2b. A task's execution start time must be greater than or equal to its LET start time,
+        # 2c. A task's execution end time must be less than or equal to its LET end time.
         for task in self.tasks_instances:
             wcet = self.get_wcet(task["name"])
             for instance in filter(lambda x: x["instance"] != -1, task["value"]):
-                instance_name = (task["name"], instance["instance"])
-                prob += (
-                    self.exec_end_vars[instance_name]
-                    - self.exec_start_vars[instance_name]
-                    == wcet
-                )
+                instance_name = f"{task['name']},{instance['instance']}"
+                prob += self.exec_end_vars[instance_name] - self.exec_start_vars[instance_name] == wcet
                 prob += self.exec_start_vars[instance_name] >= instance["letStartTime"]
                 prob += self.exec_end_vars[instance_name] <= instance["letEndTime"]
 
-        # 3a. Execution intervals for the task instances on the same core should not overlap. (From C151 - C790)
+        # 3. A task instance can only be assigned to one core.
+        for task in self.tasks_instances:
+            prob += lpSum(self.assigned_vars[f"{task['name']},{core['name']}"] for core in self.cores) == 1
+
+        # 4a, 4b, 4c. Pairs of tasks are allocated to the same core when each are allocated to the same core.
         for core1 in self.cores:
             for core2 in self.cores:
                 for task1 in self.formatted_tasks:
                     for task2 in self.formatted_tasks:
                         if task1["name"] != task2["name"]:
-                            task_x = task1["name"], core1["name"]
-                            task_y = task2["name"], core2["name"]
-                            task_pair = task_x + task_y
+                            task_x = f"{task1['name']},{core1['name']}"
+                            task_y = f"{task2['name']},{core2['name']}"
+                            task_pair = f"{task_x},{task_y}"
 
-                            prob += (
-                                psi_task_core_vars[task_pair]
-                                <= self.assigned_vars[task_x]
-                            )
-                            prob += (
-                                psi_task_core_vars[task_pair]
-                                <= self.assigned_vars[task_y]
-                            )
-                            prob += (
-                                psi_task_core_vars[task_pair]
-                                >= self.assigned_vars[task_x]
-                                + self.assigned_vars[task_y]
-                                - 1
-                            )
+                            prob += psi_task_core_vars[task_pair] <= self.assigned_vars[task_x]
+                            prob += psi_task_core_vars[task_pair] <= self.assigned_vars[task_y]
+                            prob += psi_task_core_vars[task_pair] >= self.assigned_vars[task_x] + self.assigned_vars[task_y] - 1
 
-        # 3b. (From C701 - C950)
+        # 4d. Pairs of tasks are not allocated to the same core when each are allocated to different cores.
         for task1 in self.formatted_tasks:
             for task2 in self.formatted_tasks:
                 if task1["name"] != task2["name"]:
-                    task_pair = (task1["name"], task2["name"])
+                    task_pair = f"{task1['name']},{task2['name']}"
 
                     prob += psi_tasks_vars[task_pair] == lpSum(
-                        psi_task_core_vars[
-                            task1["name"], core1["name"], task2["name"], core2["name"]
-                        ]
-                        for core1 in self.cores
-                        for core2 in self.cores
-                        if core1 != core2
+                        psi_task_core_vars[f"{task1['name']},{core1['name']},{task2['name']},{core2['name']}"]
+                        for core1 in self.cores for core2 in self.cores if core1 != core2
                     )
 
-        # 3c, 3d. (From C951 - C1110)
+        # 5a, 5b. If task x executes after task y on the same core, x's end time must be later than y's start time 
+        #         and y's end time must be earlier than x's start time.
         for task1 in self.tasks_instances:
             for task2 in self.tasks_instances:
                 if task1["name"] != task2["name"]:
-                    for instance1 in filter(
-                        lambda x: x["instance"] != -1, task1["value"]
-                    ):
-                        for instance2 in filter(
-                            lambda x: x["instance"] != -1, task2["value"]
-                        ):
-                            task_x = (task1["name"], instance1["instance"])
-                            task_y = (task2["name"], instance2["instance"])
-                            instances_pair = task_x + task_y
-                            task_pair = (task1["name"], task2["name"])
+                    for instance1 in filter(lambda x: x["instance"] != -1, task1["value"]):
+                        for instance2 in filter(lambda x: x["instance"] != -1, task2["value"]):
+                            task_x = f"{task1['name']},{instance1['instance']}"
+                            task_y = f"{task2['name']},{instance2['instance']}"
+                            instances_pair = f"{task_x},{task_y}"
+                            task_pair = f"{task1['name']},{task2['name']}"
 
-                            prob += (
-                                self.exec_end_vars[task_x]
-                                - self.exec_start_vars[task_y]
-                                <= N * bool_task_vars[instances_pair]
-                                + N * psi_tasks_vars[task_pair]
-                            )
-                            prob += (
-                                self.exec_end_vars[task_y]
-                                - self.exec_start_vars[task_x]
-                                <= N
-                                - N * bool_task_vars[instances_pair]
-                                + N * psi_tasks_vars[task_pair]
-                            )
+                            prob += self.exec_end_vars[task_x] - self.exec_start_vars[task_y] <= N * bool_task_vars[instances_pair] + N * psi_tasks_vars[task_pair]
+                            prob += self.exec_end_vars[task_y] - self.exec_start_vars[task_x] <= N - N * bool_task_vars[instances_pair] + N * psi_tasks_vars[task_pair]
 
         if path == "/min-core-usage":
             objective = MinCoreUsage()
-            objective.min_core_usage(
-                self.assigned_vars, self.cores, self.tasks_instances, prob
-            )
+            objective.min_core_usage(self.assigned_vars, self.cores, self.tasks_instances, prob)
         elif path == "/min-e2e-mc":
-            objective = MinE2EMC()
-            objective.min_e2e_mc(N, system, prob, psi_task_core_vars, self)
+            objective = MinE2E()
+            objective.min_e2e(N, system, prob, psi_task_core_vars, self)
 
-        print(prob)
-
-        prob.solve(GUROBI_CMD())
+        prob.writeLP(Config.lpFile)
+        prob.solve(getSolver(Config.solverProg))
 
         self.update_schedule()
-
         schedule = {"EntityInstancesStore": self.tasks_instances}
 
         for v in prob.variables():
@@ -279,18 +222,12 @@ class MultiCoreScheduler:
 
     def update_schedule(self):
         for task in self.tasks_instances:
-            task["value"] = [
-                instance for instance in task["value"] if instance["instance"] != -1
-            ]
+            task["value"] = [instance for instance in task["value"] if instance["instance"] != -1]
             for instance in task["value"]:
                 for core in self.cores:
-                    if self.assigned_vars[(task["name"], core["name"])].varValue == 1:
-                        start_time = self.exec_start_vars[
-                            (task["name"], instance["instance"])
-                        ].varValue
-                        end_time = self.exec_end_vars[
-                            (task["name"], instance["instance"])
-                        ].varValue
+                    if self.assigned_vars[f"{task['name']},{core['name']}"].varValue == 1:
+                        start_time = self.exec_start_vars[f"{task['name']},{instance['instance']}"].varValue
+                        end_time = self.exec_end_vars[f"{task['name']},{instance['instance']}"].varValue
 
                         execution_time = [
                             {
@@ -308,9 +245,7 @@ class MultiCoreScheduler:
 
         for task in tasks:
             instances = []
-            number_of_instances = math.ceil(
-                (makespan - task["initialOffset"]) / task["period"]
-            )
+            number_of_instances = math.ceil((makespan - task["initialOffset"]) / task["period"])
 
             instances.append(self.create_negative_instance(task, N))
 
@@ -352,9 +287,7 @@ class MultiCoreScheduler:
         }
 
     def get_wcet(self, task_name):
-        return next(
-            (task for task in self.formatted_tasks if task["name"] == task_name)
-        )["wcet"]
+        return next((task for task in self.formatted_tasks if task["name"] == task_name))["wcet"]
 
     def get_device(self, core):
         return next((c["device"] for c in self.cores if c["name"] == core), None)
@@ -363,12 +296,8 @@ class MultiCoreScheduler:
         source_tasks = []
 
         if dependencies is not None:
-            for dependency in filter(
-                lambda x: x["source"]["task"] != "__system"
-                and x["destination"]["task"] != "__system",
-                dependencies,
-            ):
-                if dependency["destination"]["task"] == task["name"]:
-                    source_tasks.append(dependency["source"]["task"])
+            for dependency in filter(lambda x: x["source"]["entity"] != "__system" and x["destination"]["entity"] != "__system", dependencies):
+                if dependency["destination"]["entity"] == task["name"]:
+                    source_tasks.append(dependency["source"]["entity"])
 
         return source_tasks

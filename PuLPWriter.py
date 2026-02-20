@@ -12,7 +12,7 @@ class  PuLPWriter:
         print("Supported Solvers: "+pl.listSolvers())
 
     def __init__(self, filename, objectiveVariable, lpLargeConstant, objectiveType=OVERALL_END_TO_END):
-        self.prob = pl.LpProblem(filename, pl.LpMinimize)
+        self.prob = pl.LpProblem("Multicore_Core_Scheduling/ilp", pl.LpMinimize)
         self.filename = filename
         self.objectiveVariable = pl.LpVariable(objectiveVariable, None, None, pl.LpInteger)
         self.lpLargeConstant = lpLargeConstant
@@ -28,7 +28,7 @@ class  PuLPWriter:
         None
 
     def writeObjective(self):
-        self.prob += self.objectiveVariable #Expressions are objectives
+        self.prob += self.objectiveVariable, "Minimise End-to-End Response Time" #Expressions are objectives
 
     def writeObjectiveEquation(self):
         #dependencyInstanceDelays = ' - '.join([x for v in self.dependencyInstanceDelayVariables.values() for x in v])
@@ -117,8 +117,6 @@ class  PuLPWriter:
                 instancePeriodEndTimeVar = self.getIntVar(self.taskInstPeriodEndTime(instanceName))
                 self.prob += instancePeriodEndTimeVar == instancePeriodStartTimeVar + taskPeriod
      
-                
-            
                 # Encode the execution bounds of the task instance in LP constraints
                 # ------------------------------------------------------------------
                 
@@ -139,9 +137,9 @@ class  PuLPWriter:
                 #Task execution time has to be greater than or equal to wcet
                 if (Config.useHeterogeneousCores):
                     currentTaskAllocations = {}
-                    for c in cores:
-                        currentTaskCoreAllocationVariable = self.getBoolVar(self.taskInstCoreAllocation(instanceName,c["name"]))
-                        currentTaskAllocations[currentTaskCoreAllocationVariable] = math.ceil(taskWcet / float(c["speedup"]))
+                    for core in cores:
+                        currentTaskCoreAllocationVariable = self.getBoolVar(self.taskInstCoreAllocation(instanceName, core["name"]))
+                        currentTaskAllocations[currentTaskCoreAllocationVariable] = math.ceil(taskWcet / float(core["speedup"]))
 
                     self.prob += taskInstEndTimeVar - taskInstStartTimeVar >= pl.lpSum([alloc * currentTaskAllocations[alloc] for alloc in currentTaskAllocations.keys()]), "WCET_"+instanceName
                 else:
@@ -251,9 +249,9 @@ class  PuLPWriter:
         for dependency in system['DependencyStore']:
             # Dependency parameters
             name = dependency['name']
-            srcTask = dependency['source']['task']
-            destTask = dependency['destination']['task']
-            dependencyPair = self.instLink(dependency['source']['task'],dependency['destination']['task'])
+            srcTask = dependency['source']['entity']
+            destTask = dependency['destination']['entity']
+            dependencyPair = self.instLink(dependency['source']['entity'], dependency['destination']['entity'])
 
             # Dependencies to the environment are left unconstrained.
             if "__system" in dependencyPair:
@@ -301,14 +299,13 @@ class  PuLPWriter:
                 self.prob += dependencyInstanceDelayVar >= 0
                 # Equations 5b and 5c
                 # if selected then:
-                    # end-to-end delay for the dependency must be = to destaskInstEndTimeVar - srcTaskInstStartTimeVar
-                    # destaskInstEndTimeVar must be after srcTaskInstStartTimeVar so that the difference is >= 0
+                #   end-to-end delay for the dependency must be equal to destaskInstEndTimeVar - srcTaskInstStartTimeVar
+                #   destaskInstEndTimeVar must be after srcTaskInstStartTimeVar so that the difference is >= 0
                 # if not selected then:
-                    # it is always larger than a very large negative number i.e., any value >= 0
-                    # it is always smaller than a very large number i.e., any value < lpLargeConstant but 0 will be choosen as the objective is to mininise
+                #   it is always larger than a very large negative number i.e., any value >= 0
+                #   it is always smaller than a very large number i.e., any value < lpLargeConstant but 0 will be choosen as the objective is to mininise
                 self.prob += dependencyInstanceDelayVar >= destTaskInstEndTimeVar - srcTaskInstStartTimeVar - self.lpLargeConstant + self.lpLargeConstant * dependencyInstanceControlVariable  
                 # Equation 5c
-                
                 self.prob += dependencyInstanceDelayVar <= destTaskInstEndTimeVar - srcTaskInstStartTimeVar + self.lpLargeConstant - self.lpLargeConstant * dependencyInstanceControlVariable 
                
                 # Create list of all dependency delay variables

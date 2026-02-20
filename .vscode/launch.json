@@ -5,29 +5,38 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Single test",
-            "type": "python",
+            "name": "SL-LET min-core-usage test",
+            "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/main.py",
-            "args": ["--solver", "pulp", "--file", "Examples\\end2end-system-wcet.json"],
+            "args": ["--solver", "PULP_CBC_CMD", "--file", "Examples/sl-let.json", "--goal", "min-core-usage"],
             "console": "integratedTerminal",
             "justMyCode": true
         },
         {
-            "name": "Multicore test",
-            "type": "python",
+            "name": "SL-LET min-e2e-mc test",
+            "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/main.py",
-            "args": ["--solver", "pulp", "--file", "Examples\\multi-core.json"],
+            "args": ["--solver", "PULP_CBC_CMD", "--file", "Examples/sl-let.json", "--goal", "min-e2e-mc"],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Multicore ilp test",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/main.py",
+            "args": ["--solver", "PULP_CBC_CMD", "--file", "Examples/multi-core.json", "--goal", "ilp"],
             "console": "integratedTerminal",
             "justMyCode": true
         },
         {
             "name": "Server test",
-            "type": "python",
+            "type": "debugpy",
             "request": "launch",
             "program": "${workspaceFolder}/main.py",
-            "args": ["--solver", "pulp"],
+            "args": ["--solver", "PULP_CBC_CMD"],
             "console": "integratedTerminal",
             "justMyCode": true
         },
