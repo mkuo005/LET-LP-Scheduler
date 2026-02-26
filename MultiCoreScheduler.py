@@ -1,8 +1,8 @@
 import math
 from pulp import LpProblem, LpMinimize, LpVariable, lpSum, getSolver
 
-from min_core_usage import MinCoreUsage
-from min_e2e_mc import MinE2E
+from MinCoreUsage import MinCoreUsage
+from MinE2E import MinE2E
 
 class MultiCoreScheduler:
 
@@ -82,22 +82,20 @@ class MultiCoreScheduler:
 
         # psi_tasks_(task_x,task_y)
         # Variable for whether two tasks are allocated to different cores.
-        # TODO: The matrices are symmetrical, so only half of it is needed for optimisation purposes.
         psi_tasks_vars = LpVariable.dicts(
             "psi_tasks",
-            [f"{task1['name']},{task2['name']}" for task1 in tasks for task2 in tasks if task1 != task2],
+            [MultiCoreScheduler.get_psi_tasks_key(task1['name'], task2['name']) for task1 in tasks for task2 in tasks if task1 != task2],
             lowBound=0,
             upBound=1,
             cat="Binary",
         )
 
         # psi_task_core_(task_x,core_k,task_y,core_l)
-        # Variable for the possible pairings of tasks to cores.
-        # TODO: The matrices are symmetrical, so only half of it is needed for optimisation purposes.
+        # Variable for the possible pairing of tasks to cores.
         psi_task_core_vars = LpVariable.dicts(
             "psi_task_core",
             [
-                f"{task1['name']},{core1['name']},{task2['name']},{core2['name']}"
+                MultiCoreScheduler.get_psi_task_core_key(task1['name'], core1['name'], task2['name'], core2['name'])
                 for core1 in self.cores for core2 in self.cores
                 for task1 in self.tasks_instances for task2 in self.tasks_instances if task1 != task2
             ],
@@ -139,27 +137,36 @@ class MultiCoreScheduler:
             prob += lpSum(self.assigned_vars[f"{task['name']},{core['name']}"] for core in self.cores) == 1
 
         # 4a, 4b, 4c. Pairs of tasks are allocated to the same core when each are allocated to the same core.
+        psi_task_core_considered = set()
         for core1 in self.cores:
             for core2 in self.cores:
                 for task1 in self.formatted_tasks:
                     for task2 in self.formatted_tasks:
                         if task1["name"] != task2["name"]:
+                            task_pair = MultiCoreScheduler.get_psi_task_core_key(task1['name'], core1['name'], task2['name'], core2['name'])
+                            # Break the symmetry because task ordering does not matter.
+                            if (task_pair in psi_task_core_considered): continue
+                            psi_task_core_considered.add(task_pair)
+
                             task_x = f"{task1['name']},{core1['name']}"
                             task_y = f"{task2['name']},{core2['name']}"
-                            task_pair = f"{task_x},{task_y}"
 
                             prob += psi_task_core_vars[task_pair] <= self.assigned_vars[task_x]
                             prob += psi_task_core_vars[task_pair] <= self.assigned_vars[task_y]
                             prob += psi_task_core_vars[task_pair] >= self.assigned_vars[task_x] + self.assigned_vars[task_y] - 1
 
         # 4d. Pairs of tasks are not allocated to the same core when each are allocated to different cores.
+        psi_tasks_considered = set()
         for task1 in self.formatted_tasks:
             for task2 in self.formatted_tasks:
                 if task1["name"] != task2["name"]:
-                    task_pair = f"{task1['name']},{task2['name']}"
+                    task_pair = MultiCoreScheduler.get_psi_tasks_key(task1['name'], task2['name'])
+                    # Break the symmetry because task ordering does not matter.
+                    if (task_pair in psi_tasks_considered): continue
+                    psi_tasks_considered.add(task_pair)
 
                     prob += psi_tasks_vars[task_pair] == lpSum(
-                        psi_task_core_vars[f"{task1['name']},{core1['name']},{task2['name']},{core2['name']}"]
+                        psi_task_core_vars[MultiCoreScheduler.get_psi_task_core_key(task1['name'], core1['name'], task2['name'], core2['name'])]
                         for core1 in self.cores for core2 in self.cores if core1 != core2
                     )
 
@@ -173,7 +180,7 @@ class MultiCoreScheduler:
                             task_x = f"{task1['name']},{instance1['instance']}"
                             task_y = f"{task2['name']},{instance2['instance']}"
                             instances_pair = f"{task_x},{task_y}"
-                            task_pair = f"{task1['name']},{task2['name']}"
+                            task_pair = MultiCoreScheduler.get_psi_tasks_key(task1['name'], task2['name'])
 
                             prob += self.exec_end_vars[task_x] - self.exec_start_vars[task_y] <= N * bool_task_vars[instances_pair] + N * psi_tasks_vars[task_pair]
                             prob += self.exec_end_vars[task_y] - self.exec_start_vars[task_x] <= N - N * bool_task_vars[instances_pair] + N * psi_tasks_vars[task_pair]
@@ -197,6 +204,18 @@ class MultiCoreScheduler:
         print(prob.sol_status)
 
         return prob.sol_status, schedule
+
+    # For breaking symmetry because the task ordering does not matter.
+    @staticmethod
+    def get_psi_tasks_key(task1Name, task2Name):
+        if task1Name < task2Name: return f"{task1Name},{task2Name}"
+        else: return f"{task2Name},{task1Name}"
+
+    # For breaking symmetry because the task ordering does not matter.
+    @staticmethod
+    def get_psi_task_core_key(task1Name, core1Name, task2Name, core2Name):
+        if task1Name < task2Name: return f"{task1Name},{core1Name},{task2Name},{core2Name}"
+        else: return f"{task2Name},{core2Name},{task1Name},{core1Name}"
 
     def format_tasks(self, tasks, dependencies):
         formatted_tasks = []

@@ -1,7 +1,7 @@
 import pulp as pl
 import math
-from enum import Enum
-class  PuLPWriter:
+
+class PuLPWriter:
     equations = [{}]
     OVERALL_END_TO_END = 1
     MIN_SUM_END_TIME = 2

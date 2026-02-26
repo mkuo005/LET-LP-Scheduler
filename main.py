@@ -15,24 +15,19 @@ The formulation in this implementation supports multicores as well.
 
 # Import web server libraries
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-import socketserver
 
 # Import the required libraries
 import sys
 import traceback
-import subprocess
 import argparse
-import re
 import json
 import math
 import pulp as pl
-from enum import Enum
 from types import SimpleNamespace
 
 # Import PuLP constraint generator
 from PuLPWriter import PuLPWriter
-from multicore import MultiCoreScheduler
-
+from MultiCoreScheduler import MultiCoreScheduler
 
 Config = SimpleNamespace(
     hostName="localhost",

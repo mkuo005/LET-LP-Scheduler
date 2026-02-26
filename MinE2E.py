@@ -1,6 +1,5 @@
 from pulp import LpVariable, lpSum
 
-
 class MinE2E:
     def __init__(self):
         self.network_delays = None
@@ -14,7 +13,7 @@ class MinE2E:
         # Variables
 
         # lambda_(task_x, task_y)
-        # Variable for just the protocol + network component of the communication delay between a pair of tasks.
+        # Variable for just the protocol + network component of the communication delay from task x to task y.
         lambda_vars = LpVariable.dicts(
             "lambda",
             [f"{task1['name']},{task2['name']}" for task1 in mcs.tasks_instances for task2 in mcs.tasks_instances if task1 != task2],
@@ -37,7 +36,7 @@ class MinE2E:
         )
 
         # delay_(task_x, instance_i, task_y, instance_j)
-        # Variable for the entire communication delay (including waiting for the data to be consumed) between a pair of task instances.
+        # Variable for the entire communication delay (including waiting for the data to be consumed) from task x, instance i to task y, instance j.
         delay_vars = LpVariable.dicts(
             "delay",
             [
@@ -58,7 +57,7 @@ class MinE2E:
                 if task1["name"] != task2["name"]:
                     task_pair = f"{task1['name']},{task2['name']}"
                     prob += lambda_vars[task_pair] == lpSum(
-                        psi_task_core_vars[f"{task1['name']},{core1['name']},{task2['name']},{core2['name']}"] * self.get_delay(core1, core2, N)
+                        psi_task_core_vars[mcs.get_psi_task_core_key(task1['name'], core1['name'], task2['name'], core2['name'])] * self.get_delay(core1, core2, N)
                         for core1 in mcs.cores for core2 in mcs.cores
                     )
 
