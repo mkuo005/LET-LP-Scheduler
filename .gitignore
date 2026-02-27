@@ -8,5 +8,7 @@ gurobi.log
 .DS_Store
 schedule.json
 input_system.json
-schedule.json
-input_system.json
+.venv
+*.txt
+/lp_solve_5.5
+/lp_solve_5.5.2.11_dev_ux64
